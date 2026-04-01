@@ -51,7 +51,7 @@ func show_menu(has_active_level: bool) -> void:
 func _process(_delta: float) -> void:
 	if not visible:
 		return
-	if Input.is_action_just_pressed("ui_accept"):
+	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("engine_rear"):
 		var focused := get_viewport().gui_get_focus_owner()
 		if focused is Button:
 			focused.emit_signal("pressed")
