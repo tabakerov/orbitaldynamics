@@ -24,6 +24,12 @@ colors = PackedColorArray(1, 0.7, 0.2, 1, 1, 0.3, 0.05, 0.8, 0.2, 0.05, 0.02, 0)
 [sub_resource type="GradientTexture1D" id="ramp_texture"]
 gradient = SubResource("color_ramp")
 
+[sub_resource type="StandardMaterial3D" id="particle_billboard_mat"]
+transparency = 1
+shading_mode = 0
+billboard_mode = 3
+vertex_color_use_as_albedo = true
+
 [sub_resource type="ParticleProcessMaterial" id="particle_mat"]
 direction = Vector3(0, 0, 1)
 spread = 15.0
@@ -36,6 +42,7 @@ color = Color(1, 0.5, 0.1, 1)
 color_ramp = SubResource("ramp_texture")
 
 [sub_resource type="QuadMesh" id="particle_mesh"]
+material = SubResource("particle_billboard_mat")
 size = Vector2(0.06, 0.06)
 
 [node name="Engine" type="Node3D" unique_id=165746692]
