@@ -5,6 +5,7 @@ extends Node3D
 
 var _current_level: Level
 var _level_index: int = 0
+var _loading: bool = false
 
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _hud: Control = $CanvasLayer/HUD
@@ -46,6 +47,10 @@ func _on_quit_requested() -> void:
 
 
 func _load_level(index: int) -> void:
+	if _loading:
+		return
+	_loading = true
+
 	if _current_level:
 		_current_level.queue_free()
 		await _current_level.tree_exited
@@ -65,6 +70,8 @@ func _load_level(index: int) -> void:
 	if ship:
 		_camera_rig.set_target(ship)
 		_hud.setup(ship)
+
+	_loading = false
 
 
 func _on_level_completed() -> void:
