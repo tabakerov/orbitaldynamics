@@ -1,16 +1,37 @@
 extends Node3D
 
 @export var levels: Array[PackedScene] = []
+@export var level_names: Array[String] = ["Level 1"]
 
 var _current_level: Level
 var _level_index: int = 0
 
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _hud: Control = $CanvasLayer/HUD
+@onready var _level_select: Control = $MenuLayer/LevelSelect
 
 
 func _ready() -> void:
-	_load_level(0)
+	_level_select.setup(level_names)
+	_level_select.level_selected.connect(_on_level_selected)
+	_show_menu()
+
+
+func _show_menu() -> void:
+	_level_select.visible = true
+	_hud.visible = false
+	get_tree().paused = true
+
+
+func _hide_menu() -> void:
+	_level_select.visible = false
+	_hud.visible = true
+	get_tree().paused = false
+
+
+func _on_level_selected(index: int) -> void:
+	_hide_menu()
+	_load_level(index)
 
 
 func _load_level(index: int) -> void:
@@ -35,7 +56,7 @@ func _on_level_completed() -> void:
 	if _level_index + 1 < levels.size():
 		_load_level(_level_index + 1)
 	else:
-		print("All levels complete!")
+		_show_menu()
 
 
 func _on_ship_crashed() -> void:
@@ -44,4 +65,12 @@ func _on_ship_crashed() -> void:
 
 func _unhandled_input(_event: InputEvent) -> void:
 	if Input.is_action_just_pressed("restart"):
+		if _level_select.visible:
+			return
 		_load_level(_level_index)
+	if Input.is_action_just_pressed("ui_cancel"):
+		if _level_select.visible:
+			if _current_level:
+				_hide_menu()
+		else:
+			_show_menu()

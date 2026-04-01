@@ -1,13 +1,15 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/camera_rig.tscn" id="2"]
 [ext_resource type="Script" path="res://scripts/hud.gd" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/levels/level_01.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/level_select.gd" id="5"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
 levels = [ExtResource("4")]
+level_names = Array[String](["Level 1"])
 
 [node name="CameraRig" parent="." instance=ExtResource("2")]
 
@@ -44,6 +46,64 @@ anchor_top = 0.88
 anchor_right = 0.25
 anchor_bottom = 0.92
 text = "Fuel: 100%"
+
+[node name="MenuLayer" type="CanvasLayer" parent="."]
+layer = 10
+process_mode = 3
+
+[node name="LevelSelect" type="Control" parent="MenuLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5")
+
+[node name="Background" type="ColorRect" parent="MenuLayer/LevelSelect"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.12, 1)
+
+[node name="VBox" type="VBoxContainer" parent="MenuLayer/LevelSelect"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="MenuLayer/LevelSelect/VBox"]
+layout_mode = 2
+text = "ORBITAL DYNAMICS"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="MenuLayer/LevelSelect/VBox"]
+layout_mode = 2
+text = "Select a level"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="MenuLayer/LevelSelect/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 20)
+
+[node name="LevelList" type="VBoxContainer" parent="MenuLayer/LevelSelect/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 50, 0)
