@@ -1,0 +1,32 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/level.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/celestial_body.tscn" id="2"]
+[ext_resource type="Resource" path="res://resources/planet_medium.tres" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/ship.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/engine.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/target.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="7"]
+
+[node name="Level01" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Planet" parent="." instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+body_data = ExtResource("3")
+initial_velocity = Vector3(0, 0, 0)
+
+[node name="Ship" parent="." instance=ExtResource("4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 0)
+front_engine_scene = ExtResource("5")
+rear_engine_scene = ExtResource("5")
+left_engine_scene = ExtResource("5")
+right_engine_scene = ExtResource("5")
+starting_fuel = 200.0
+
+[node name="Target" parent="." instance=ExtResource("6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, 0)
+
+[node name="FuelPickup" parent="." instance=ExtResource("7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20)
+fuel_amount = 50.0
