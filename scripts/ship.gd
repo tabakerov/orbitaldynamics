@@ -93,7 +93,7 @@ func _update_gimbal(delta: float) -> void:
 		if _stick_active:
 			var angle_delta := stick_angle - _prev_stick_angle
 			# Wrap to [-PI, PI] to handle crossing ±180°
-			angle_delta = fmod(angle_delta + PI, TAU) - PI
+			angle_delta = fposmod(angle_delta + PI, TAU) - PI
 			gimbal_delta += angle_delta * GIMBAL_STICK_SENSITIVITY
 		_prev_stick_angle = stick_angle
 		_stick_active = true
