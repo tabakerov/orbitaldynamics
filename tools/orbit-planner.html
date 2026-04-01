@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orbital Dynamics — Orbit Planner</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: monospace; background: #0a0a14; color: #ccc; display: flex; height: 100vh; overflow: hidden; }
+
+#sidebar {
+  width: 320px; min-width: 320px; background: #12121e; padding: 12px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  border-right: 1px solid #333;
+}
+#sidebar h2 { color: #eee; font-size: 14px; margin-bottom: 4px; }
+#sidebar h3 { color: #aaa; font-size: 12px; margin: 8px 0 4px; }
+
+.body-card {
+  background: #1a1a2e; border: 1px solid #333; border-radius: 6px;
+  padding: 8px; font-size: 12px;
+}
+.body-card.selected { border-color: #6af; }
+.body-card .header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; cursor: pointer;
+}
+.body-card .header .name { font-weight: bold; font-size: 13px; }
+.body-card .color-dot {
+  width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+  margin-right: 6px; vertical-align: middle;
+}
+.body-card label { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.body-card label span { min-width: 90px; color: #999; }
+.body-card input[type="number"] {
+  width: 80px; background: #111; border: 1px solid #444; color: #eee;
+  padding: 2px 4px; border-radius: 3px; font-family: monospace;
+}
+.body-card .row { display: flex; gap: 4px; }
+.body-card .row input { width: 60px; }
+
+button {
+  background: #2a2a4a; border: 1px solid #555; color: #ddd; padding: 6px 12px;
+  border-radius: 4px; cursor: pointer; font-family: monospace; font-size: 12px;
+}
+button:hover { background: #3a3a5a; }
+button.danger { border-color: #a44; color: #faa; }
+button.danger:hover { background: #4a2020; }
+button.primary { border-color: #4a4; color: #afa; }
+
+#canvas-wrap { flex: 1; position: relative; }
+canvas { display: block; width: 100%; height: 100%; }
+
+#toolbar {
+  position: absolute; top: 10px; left: 10px; display: flex; gap: 8px;
+  background: rgba(18,18,30,0.9); padding: 8px; border-radius: 6px;
+  border: 1px solid #333; align-items: center; font-size: 12px;
+}
+#toolbar label { display: flex; align-items: center; gap: 4px; }
+#toolbar input[type="number"] {
+  width: 60px; background: #111; border: 1px solid #444; color: #eee;
+  padding: 2px 4px; border-radius: 3px; font-family: monospace;
+}
+#toolbar input[type="range"] { width: 100px; }
+
+#export-box {
+  position: absolute; bottom: 10px; left: 10px; right: 10px;
+  background: rgba(18,18,30,0.95); padding: 10px; border-radius: 6px;
+  border: 1px solid #333; font-size: 11px; display: none;
+}
+#export-box pre {
+  background: #0a0a14; padding: 8px; border-radius: 4px;
+  max-height: 200px; overflow: auto; white-space: pre-wrap; color: #8f8;
+  user-select: all;
+}
+
+#help {
+  position: absolute; bottom: 10px; right: 10px;
+  background: rgba(18,18,30,0.9); padding: 8px; border-radius: 6px;
+  border: 1px solid #333; font-size: 11px; color: #888;
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>Orbit Planner</h2>
+
+  <div style="display:flex;gap:4px;">
+    <button onclick="addBody()">+ Planet</button>
+    <button onclick="addShipMarker()">+ Ship</button>
+    <button class="primary" onclick="toggleExport()">Export</button>
+  </div>
+
+  <h3>Simulation</h3>
+  <label style="font-size:12px;">
+    <span style="color:#999;">G constant</span>
+    <input type="number" id="g-const" value="1.0" step="0.1" min="0" onchange="simulate()">
+  </label>
+  <label style="font-size:12px;">
+    <span style="color:#999;">Steps</span>
+    <input type="number" id="sim-steps" value="3000" step="100" min="100" max="50000" onchange="simulate()">
+  </label>
+  <label style="font-size:12px;">
+    <span style="color:#999;">dt (1/fps)</span>
+    <input type="number" id="sim-dt" value="0.01667" step="0.001" min="0.001" onchange="simulate()">
+  </label>
+
+  <h3>Bodies</h3>
+  <div id="body-list"></div>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div id="toolbar">
+    <label>Zoom: <input type="range" id="zoom" min="0.5" max="20" step="0.1" value="5" oninput="draw()"></label>
+    <label>Trail opacity: <input type="range" id="trail-alpha" min="0.05" max="1" step="0.05" value="0.4" oninput="draw()"></label>
+    <button onclick="resetView()">Reset view</button>
+  </div>
+  <div id="help">
+    Drag body = move | Shift+drag = set velocity | Scroll = zoom | Middle-drag = pan
+  </div>
+  <div id="export-box">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+      <strong>Godot Scene Snippet</strong>
+      <button onclick="toggleExport()">Close</button>
+    </div>
+    <pre id="export-text"></pre>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#e67e22','#3498db','#e74c3c','#2ecc71','#9b59b6','#1abc9c','#f39c12','#e84393'];
+
+let bodies = [];
+let shipPos = null;
+let trails = [];
+let shipTrail = [];
+let selectedId = null;
+let dragging = null; // {id, mode:'pos'|'vel'}
+let panning = false;
+let panStart = {x:0, y:0};
+let viewOffset = {x:0, y:0};
+let nextId = 1;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = canvas.clientWidth * devicePixelRatio;
+  canvas.height = canvas.clientHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+window.addEventListener('resize', resize);
+
+function getZoom() { return parseFloat(document.getElementById('zoom').value); }
+
+function worldToScreen(wx, wz) {
+  const z = getZoom();
+  const cx = canvas.clientWidth / 2 + viewOffset.x;
+  const cy = canvas.clientHeight / 2 + viewOffset.y;
+  return { x: cx + wx * z, y: cy + wz * z };
+}
+
+function screenToWorld(sx, sy) {
+  const z = getZoom();
+  const cx = canvas.clientWidth / 2 + viewOffset.x;
+  const cy = canvas.clientHeight / 2 + viewOffset.y;
+  return { x: (sx - cx) / z, z: (sy - cy) / z };
+}
+
+function addBody(cfg) {
+  const id = nextId++;
+  const ci = (bodies.length) % COLORS.length;
+  const b = {
+    id, name: cfg?.name || `Planet ${id}`,
+    x: cfg?.x ?? 0, z: cfg?.z ?? 0,
+    vx: cfg?.vx ?? 0, vz: cfg?.vz ?? 0,
+    mass: cfg?.mass ?? 500, gravity_strength: cfg?.gravity_strength ?? 1.0,
+    falloff_exponent: cfg?.falloff_exponent ?? 2.0,
+    max_range: cfg?.max_range ?? 80, min_range: cfg?.min_range ?? 2.0,
+    radius: cfg?.radius ?? 3.0,
+    color: cfg?.color || COLORS[ci],
+  };
+  bodies.push(b);
+  selectedId = id;
+  rebuildUI();
+  simulate();
+  return b;
+}
+
+function addShipMarker() {
+  shipPos = shipPos || { x: 30, z: 0 };
+  simulate();
+  draw();
+}
+
+function removeBody(id) {
+  bodies = bodies.filter(b => b.id !== id);
+  if (selectedId === id) selectedId = bodies[0]?.id || null;
+  rebuildUI();
+  simulate();
+}
+
+function rebuildUI() {
+  const list = document.getElementById('body-list');
+  list.innerHTML = '';
+  for (const b of bodies) {
+    const card = document.createElement('div');
+    card.className = 'body-card' + (b.id === selectedId ? ' selected' : '');
+    card.innerHTML = `
+      <div class="header" onclick="selectedId=${b.id};rebuildUI();draw();">
+        <span class="name"><span class="color-dot" style="background:${b.color}"></span>${b.name}</span>
+        <button class="danger" onclick="event.stopPropagation();removeBody(${b.id})">x</button>
+      </div>
+      <label><span>position</span><div class="row">
+        <input type="number" value="${b.x}" step="1" onchange="updBody(${b.id},'x',this.value)">
+        <input type="number" value="${b.z}" step="1" onchange="updBody(${b.id},'z',this.value)">
+      </div></label>
+      <label><span>velocity</span><div class="row">
+        <input type="number" value="${b.vx}" step="0.5" onchange="updBody(${b.id},'vx',this.value)">
+        <input type="number" value="${b.vz}" step="0.5" onchange="updBody(${b.id},'vz',this.value)">
+      </div></label>
+      <label><span>mass</span><input type="number" value="${b.mass}" step="50" min="0" onchange="updBody(${b.id},'mass',this.value)"></label>
+      <label><span>radius</span><input type="number" value="${b.radius}" step="0.5" min="0.1" onchange="updBody(${b.id},'radius',this.value)"></label>
+      <label><span>grav strength</span><input type="number" value="${b.gravity_strength}" step="0.1" min="0" onchange="updBody(${b.id},'gravity_strength',this.value)"></label>
+      <label><span>falloff exp</span><input type="number" value="${b.falloff_exponent}" step="0.1" min="0.1" onchange="updBody(${b.id},'falloff_exponent',this.value)"></label>
+      <label><span>max range</span><input type="number" value="${b.max_range}" step="5" min="1" onchange="updBody(${b.id},'max_range',this.value)"></label>
+      <label><span>min range</span><input type="number" value="${b.min_range}" step="0.5" min="0.1" onchange="updBody(${b.id},'min_range',this.value)"></label>
+    `;
+    list.appendChild(card);
+  }
+
+  if (shipPos) {
+    const card = document.createElement('div');
+    card.className = 'body-card';
+    card.innerHTML = `
+      <div class="header">
+        <span class="name" style="color:#6af;">Ship Spawn</span>
+        <button class="danger" onclick="shipPos=null;simulate();rebuildUI();">x</button>
+      </div>
+      <label><span>position</span><div class="row">
+        <input type="number" value="${shipPos.x}" step="1" onchange="shipPos.x=+this.value;simulate();">
+        <input type="number" value="${shipPos.z}" step="1" onchange="shipPos.z=+this.value;simulate();">
+      </div></label>
+    `;
+    list.appendChild(card);
+  }
+}
+
+function updBody(id, key, val) {
+  const b = bodies.find(b => b.id === id);
+  if (b) { b[key] = parseFloat(val); simulate(); }
+}
+
+// --- Simulation (matches Godot's celestial_simulation.gd) ---
+
+function simulate() {
+  const G = parseFloat(document.getElementById('g-const').value) || 1.0;
+  const steps = parseInt(document.getElementById('sim-steps').value) || 3000;
+  const dt = parseFloat(document.getElementById('sim-dt').value) || 1/60;
+  const n = bodies.length;
+
+  // Copy initial state
+  const px = bodies.map(b => b.x);
+  const pz = bodies.map(b => b.z);
+  const vx = bodies.map(b => b.vx);
+  const vz = bodies.map(b => b.vz);
+  const masses = bodies.map(b => b.mass);
+
+  // Ship state
+  let sx = shipPos ? shipPos.x : null;
+  let sz = shipPos ? shipPos.z : null;
+  let svx = 0, svz = 0;
+
+  trails = bodies.map(() => []);
+  shipTrail = [];
+
+  for (let s = 0; s < steps; s++) {
+    // Record positions
+    for (let i = 0; i < n; i++) {
+      if (s % 2 === 0) trails[i].push(px[i], pz[i]);
+    }
+    if (sx !== null && s % 2 === 0) shipTrail.push(sx, sz);
+
+    // Compute inter-body accelerations
+    const ax = new Float64Array(n);
+    const az = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const dx = px[j] - px[i];
+        const dz = pz[j] - pz[i];
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < 0.001) continue;
+        const dirx = dx / dist;
+        const dirz = dz / dist;
+        const ai = G * masses[j] / (dist * dist);
+        const aj = G * masses[i] / (dist * dist);
+        ax[i] += dirx * ai; az[i] += dirz * ai;
+        ax[j] -= dirx * aj; az[j] -= dirz * aj;
+      }
+    }
+
+    // Symplectic Euler for bodies
+    for (let i = 0; i < n; i++) {
+      vx[i] += ax[i] * dt; vz[i] += az[i] * dt;
+      px[i] += vx[i] * dt; pz[i] += vz[i] * dt;
+    }
+
+    // Ship gravity (from bodies, using per-body tunable params)
+    if (sx !== null) {
+      let gx = 0, gz = 0;
+      for (let i = 0; i < n; i++) {
+        const dx = px[i] - sx;
+        const dz = pz[i] - sz;
+        const rawDist = Math.sqrt(dx*dx + dz*dz);
+        if (rawDist > bodies[i].max_range) continue;
+        const dist = Math.max(bodies[i].min_range, Math.min(rawDist, bodies[i].max_range));
+        const str = bodies[i].gravity_strength * masses[i] / Math.pow(dist, bodies[i].falloff_exponent);
+        const len = Math.sqrt(dx*dx + dz*dz) || 1;
+        gx += (dx/len) * str;
+        gz += (dz/len) * str;
+      }
+      svx += gx * dt; svz += gz * dt;
+      sx += svx * dt; sz += svz * dt;
+    }
+  }
+
+  draw();
+}
+
+// --- Drawing ---
+
+function draw() {
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+  const alpha = parseFloat(document.getElementById('trail-alpha').value);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  const z = getZoom();
+  let gridStep = 10;
+  if (z < 2) gridStep = 50;
+  else if (z < 5) gridStep = 20;
+  else if (z > 15) gridStep = 5;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  const topLeft = screenToWorld(0, 0);
+  const botRight = screenToWorld(W, H);
+  const startX = Math.floor(topLeft.x / gridStep) * gridStep;
+  const startZ = Math.floor(topLeft.z / gridStep) * gridStep;
+  for (let gx = startX; gx <= botRight.x; gx += gridStep) {
+    const s = worldToScreen(gx, 0);
+    ctx.beginPath(); ctx.moveTo(s.x, 0); ctx.lineTo(s.x, H); ctx.stroke();
+  }
+  for (let gz = startZ; gz <= botRight.z; gz += gridStep) {
+    const s = worldToScreen(0, gz);
+    ctx.beginPath(); ctx.moveTo(0, s.y); ctx.lineTo(W, s.y); ctx.stroke();
+  }
+
+  // Origin crosshair
+  const o = worldToScreen(0, 0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath(); ctx.moveTo(o.x-10, o.y); ctx.lineTo(o.x+10, o.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(o.x, o.y-10); ctx.lineTo(o.x, o.y+10); ctx.stroke();
+
+  // Trails
+  for (let i = 0; i < bodies.length; i++) {
+    const t = trails[i];
+    if (!t || t.length < 4) continue;
+    ctx.strokeStyle = bodies[i].color + hex(alpha);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let p = worldToScreen(t[0], t[1]);
+    ctx.moveTo(p.x, p.y);
+    for (let j = 2; j < t.length; j += 2) {
+      p = worldToScreen(t[j], t[j+1]);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+
+  // Ship trail
+  if (shipTrail.length >= 4) {
+    ctx.strokeStyle = '#6af' + hex(alpha);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    let p = worldToScreen(shipTrail[0], shipTrail[1]);
+    ctx.moveTo(p.x, p.y);
+    for (let j = 2; j < shipTrail.length; j += 2) {
+      p = worldToScreen(shipTrail[j], shipTrail[j+1]);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Bodies
+  for (const b of bodies) {
+    const s = worldToScreen(b.x, b.z);
+    const r = Math.max(b.radius * z, 4);
+
+    // Max range circle
+    ctx.strokeStyle = b.color + '33';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, b.max_range * z, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Body circle
+    ctx.fillStyle = b.color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Selection ring
+    if (b.id === selectedId) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Velocity arrow
+    if (Math.abs(b.vx) > 0.01 || Math.abs(b.vz) > 0.01) {
+      const vScale = 5;
+      const ex = s.x + b.vx * vScale;
+      const ey = s.y + b.vz * vScale;
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(ex, ey); ctx.stroke();
+      // Arrowhead
+      const angle = Math.atan2(ey - s.y, ex - s.x);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 8*Math.cos(angle-0.4), ey - 8*Math.sin(angle-0.4));
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 8*Math.cos(angle+0.4), ey - 8*Math.sin(angle+0.4));
+      ctx.stroke();
+    }
+
+    // Label
+    ctx.fillStyle = '#ccc';
+    ctx.font = '11px monospace';
+    ctx.fillText(b.name, s.x + r + 6, s.y - r);
+  }
+
+  // Ship marker
+  if (shipPos) {
+    const s = worldToScreen(shipPos.x, shipPos.z);
+    ctx.strokeStyle = '#6af';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - 8); ctx.lineTo(s.x + 6, s.y + 6);
+    ctx.lineTo(s.x - 6, s.y + 6); ctx.closePath();
+    ctx.stroke();
+    ctx.fillStyle = '#6af';
+    ctx.font = '11px monospace';
+    ctx.fillText('Ship', s.x + 10, s.y - 4);
+  }
+}
+
+function hex(a) {
+  return Math.round(a * 255).toString(16).padStart(2, '0');
+}
+
+// --- Interaction ---
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 1) { // middle
+    panning = true;
+    panStart = { x: e.clientX - viewOffset.x, y: e.clientY - viewOffset.y };
+    e.preventDefault();
+    return;
+  }
+  if (e.button !== 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const w = screenToWorld(mx, my);
+
+  // Check ship
+  if (shipPos) {
+    const dx = w.x - shipPos.x, dz = w.z - shipPos.z;
+    if (Math.sqrt(dx*dx + dz*dz) < 4 / getZoom() + 2) {
+      dragging = { id: 'ship', mode: 'pos' };
+      return;
+    }
+  }
+
+  // Check bodies
+  for (const b of bodies) {
+    const dx = w.x - b.x, dz = w.z - b.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    const hitR = Math.max(b.radius, 3 / getZoom());
+    if (dist < hitR + 2) {
+      selectedId = b.id;
+      dragging = { id: b.id, mode: e.shiftKey ? 'vel' : 'pos' };
+      rebuildUI();
+      return;
+    }
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (panning) {
+    viewOffset.x = e.clientX - panStart.x;
+    viewOffset.y = e.clientY - panStart.y;
+    draw();
+    return;
+  }
+  if (!dragging) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const w = screenToWorld(mx, my);
+
+  if (dragging.id === 'ship') {
+    shipPos.x = Math.round(w.x * 10) / 10;
+    shipPos.z = Math.round(w.z * 10) / 10;
+    simulate();
+    rebuildUI();
+    return;
+  }
+
+  const b = bodies.find(b => b.id === dragging.id);
+  if (!b) return;
+  if (dragging.mode === 'pos') {
+    b.x = Math.round(w.x * 10) / 10;
+    b.z = Math.round(w.z * 10) / 10;
+  } else {
+    b.vx = Math.round((w.x - b.x) * 10) / 10;
+    b.vz = Math.round((w.z - b.z) * 10) / 10;
+  }
+  simulate();
+  rebuildUI();
+});
+
+canvas.addEventListener('mouseup', () => { dragging = null; panning = false; });
+canvas.addEventListener('mouseleave', () => { dragging = null; panning = false; });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const el = document.getElementById('zoom');
+  let z = parseFloat(el.value);
+  z *= e.deltaY < 0 ? 1.15 : 0.87;
+  z = Math.max(0.5, Math.min(20, z));
+  el.value = z;
+  draw();
+}, { passive: false });
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+function resetView() {
+  viewOffset = { x: 0, y: 0 };
+  document.getElementById('zoom').value = 5;
+  draw();
+}
+
+// --- Export ---
+
+function toggleExport() {
+  const box = document.getElementById('export-box');
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+
+  let txt = '# Celestial bodies for level scene\n';
+  txt += `# G constant: ${document.getElementById('g-const').value}\n\n`;
+
+  for (let i = 0; i < bodies.length; i++) {
+    const b = bodies[i];
+    txt += `# ${b.name}: pos=(${b.x}, ${b.z}) vel=(${b.vx}, ${b.vz})\n`;
+    txt += `[node name="${b.name.replace(/\s+/g,'')}" parent="." instance=ExtResource("celestial_body")]\n`;
+    txt += `transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${b.x}, 0, ${b.z})\n`;
+    txt += `body_data = # CelestialBodyData resource with:\n`;
+    txt += `#   mass = ${b.mass}\n`;
+    txt += `#   gravity_strength = ${b.gravity_strength}\n`;
+    txt += `#   falloff_exponent = ${b.falloff_exponent}\n`;
+    txt += `#   max_range = ${b.max_range}\n`;
+    txt += `#   min_range = ${b.min_range}\n`;
+    txt += `#   radius = ${b.radius}\n`;
+    txt += `initial_velocity = Vector3(${b.vx}, 0, ${b.vz})\n\n`;
+  }
+
+  if (shipPos) {
+    txt += `# Ship spawn: pos=(${shipPos.x}, ${shipPos.z})\n`;
+    txt += `[node name="Ship" parent="." instance=ExtResource("ship")]\n`;
+    txt += `transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${shipPos.x}, 0, ${shipPos.z})\n`;
+  }
+
+  document.getElementById('export-text').textContent = txt;
+  box.style.display = 'block';
+}
+
+// --- Init ---
+
+addBody({ name: 'Planet 1', x: 0, z: 0, vx: 0, vz: 0, mass: 500, radius: 3 });
+addShipMarker();
+resize();
+</script>
+</body>
+</html>
