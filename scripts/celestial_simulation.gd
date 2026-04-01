@@ -1,4 +1,3 @@
-class_name CelestialSim
 extends Node
 
 ## Gravitational constant for inter-body attraction.
@@ -17,7 +16,7 @@ var _min_ranges: PackedFloat64Array
 
 
 func initialize(
-	data: Array[CelestialBodyData],
+	data: Array,
 	positions: PackedVector3Array,
 	velocities: PackedVector3Array
 ) -> void:

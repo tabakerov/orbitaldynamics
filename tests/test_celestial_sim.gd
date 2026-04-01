@@ -1,5 +1,7 @@
 extends SceneTree
 
+const SimScript = preload("res://scripts/celestial_simulation.gd")
+
 
 func _init() -> void:
 	_test_single_body_gravity_direction()
@@ -13,8 +15,8 @@ func _init() -> void:
 	quit()
 
 
-func _make_sim() -> CelestialSim:
-	var sim := CelestialSim.new()
+func _make_sim() -> Node:
+	var sim = SimScript.new()
 	sim.gravitational_constant = 1.0
 	return sim
 
@@ -37,13 +39,13 @@ func _make_body(
 
 
 func _test_single_body_gravity_direction() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	sim.initialize(
 		[_make_body()],
 		PackedVector3Array([Vector3.ZERO]),
 		PackedVector3Array([Vector3.ZERO]),
 	)
-	var gravity := sim.get_gravity_at(Vector3(10, 0, 0))
+	var gravity: Vector3 = sim.get_gravity_at(Vector3(10, 0, 0))
 	assert(
 		gravity.normalized().is_equal_approx(Vector3(-1, 0, 0)),
 		"Gravity should point toward body. Got: %s" % str(gravity.normalized()),
@@ -52,14 +54,14 @@ func _test_single_body_gravity_direction() -> void:
 
 
 func _test_single_body_gravity_magnitude() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	sim.initialize(
 		[_make_body()],
 		PackedVector3Array([Vector3.ZERO]),
 		PackedVector3Array([Vector3.ZERO]),
 	)
 	# gravity_strength(1) * mass(1000) / dist(10)^2 = 10.0
-	var gravity := sim.get_gravity_at(Vector3(10, 0, 0))
+	var gravity: Vector3 = sim.get_gravity_at(Vector3(10, 0, 0))
 	assert(
 		absf(gravity.length() - 10.0) < 0.01,
 		"Gravity magnitude should be ~10.0, got %f" % gravity.length(),
@@ -68,15 +70,15 @@ func _test_single_body_gravity_magnitude() -> void:
 
 
 func _test_gravity_inverse_square_falloff() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	sim.initialize(
 		[_make_body()],
 		PackedVector3Array([Vector3.ZERO]),
 		PackedVector3Array([Vector3.ZERO]),
 	)
-	var g_at_5 := sim.get_gravity_at(Vector3(5, 0, 0)).length()
-	var g_at_10 := sim.get_gravity_at(Vector3(10, 0, 0)).length()
-	var ratio := g_at_5 / g_at_10
+	var g_at_5: float = sim.get_gravity_at(Vector3(5, 0, 0)).length()
+	var g_at_10: float = sim.get_gravity_at(Vector3(10, 0, 0)).length()
+	var ratio: float = g_at_5 / g_at_10
 	assert(
 		absf(ratio - 4.0) < 0.01,
 		"Inverse square ratio should be 4.0, got %f" % ratio,
@@ -85,13 +87,13 @@ func _test_gravity_inverse_square_falloff() -> void:
 
 
 func _test_gravity_max_range_cutoff() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	sim.initialize(
 		[_make_body(1000.0, 1.0, 2.0, 50.0)],
 		PackedVector3Array([Vector3.ZERO]),
 		PackedVector3Array([Vector3.ZERO]),
 	)
-	var gravity := sim.get_gravity_at(Vector3(51, 0, 0))
+	var gravity: Vector3 = sim.get_gravity_at(Vector3(51, 0, 0))
 	assert(
 		gravity.is_equal_approx(Vector3.ZERO),
 		"Gravity beyond max_range should be zero. Got: %s" % str(gravity),
@@ -100,15 +102,15 @@ func _test_gravity_max_range_cutoff() -> void:
 
 
 func _test_gravity_min_range_clamp() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	sim.initialize(
 		[_make_body(1000.0, 1.0, 2.0, 80.0, 5.0)],
 		PackedVector3Array([Vector3.ZERO]),
 		PackedVector3Array([Vector3.ZERO]),
 	)
 	# At distance 1.0 (less than min_range 5.0), distance is clamped to 5.0
-	var g_at_1 := sim.get_gravity_at(Vector3(1, 0, 0)).length()
-	var g_at_5 := sim.get_gravity_at(Vector3(5, 0, 0)).length()
+	var g_at_1: float = sim.get_gravity_at(Vector3(1, 0, 0)).length()
+	var g_at_5: float = sim.get_gravity_at(Vector3(5, 0, 0)).length()
 	assert(
 		absf(g_at_1 - g_at_5) < 0.01,
 		"Gravity inside min_range should equal gravity at min_range. Got %f vs %f" % [g_at_1, g_at_5],
@@ -117,7 +119,7 @@ func _test_gravity_min_range_clamp() -> void:
 
 
 func _test_two_body_orbit_bounded() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	var body := _make_body(100.0)
 	sim.initialize(
 		[body, body],
@@ -126,7 +128,7 @@ func _test_two_body_orbit_bounded() -> void:
 	)
 	for i in 1000:
 		sim.step(1.0 / 60.0)
-	var dist := sim.get_body_position(0).distance_to(sim.get_body_position(1))
+	var dist: float = sim.get_body_position(0).distance_to(sim.get_body_position(1))
 	assert(
 		dist < 200.0,
 		"Two-body system should remain bounded. Distance: %f" % dist,
@@ -135,7 +137,7 @@ func _test_two_body_orbit_bounded() -> void:
 
 
 func _test_plane_constraint() -> void:
-	var sim := _make_sim()
+	var sim = _make_sim()
 	var body := _make_body(100.0)
 	# Intentionally give Y velocity — should be zeroed
 	sim.initialize(
