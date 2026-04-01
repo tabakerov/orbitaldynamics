@@ -15,24 +15,25 @@
 ```
 scripts/
   celestial_body_data.gd   — Resource: per-body mass, gravity params, radius
-  celestial_simulation.gd  — Autoload singleton: N-body integrator + gravity query
+  celestial_simulation.gd  — Autoload singleton (no class_name): N-body integrator + gravity query
   celestial_body.gd        — AnimatableBody3D: syncs visual position from sim
-  engine.gd                — Node3D: thrust vector, gimbal, fuel drain
-  ship.gd                  — RigidBody3D: input, engine management, fuel, gravity
-  camera_rig.gd            — Node3D: follows ship position + Y rotation
-  fuel_pickup.gd           — Area3D: grants fuel on overlap
-  target.gd                — Area3D: emits signal on ship arrival
-  level.gd                 — Node3D: initializes sim from child celestial bodies
+  engine.gd                — ShipEngine (Node3D): thrust vector, gimbal, fuel drain, visual indicators
+  ship.gd                  — Ship (RigidBody3D): hold-to-activate input, per-engine gimbal, fuel, gravity
+  camera_rig.gd            — CameraRig (Node3D): follows ship position + Y rotation, explicit current camera
+  fuel_pickup.gd           — FuelPickup (Area3D): grants fuel on overlap
+  target.gd                — Target (Area3D): emits signal on ship arrival
+  level.gd                 — Level (Node3D): initializes sim from child celestial bodies
+  level_select.gd          — Control: level select / pause menu with gamepad support
   hud.gd                   — Control: fuel gauge
-  main.gd                  — Node3D: level loading, restart, win flow
+  main.gd                  — Node3D: level loading, menu, restart, quit, win flow
 
 scenes/
-  engine.tscn              — Engine visual + exhaust indicator
-  ship.tscn                — Hull mesh, collision, 4 mount points
+  engine.tscn              — Engine body + exhaust mesh + particles + active light
+  ship.tscn                — Hull mesh, collision, 4 mount points (exhaust away from ship)
   celestial_body.tscn      — Sphere mesh + collision, driven by sim
   fuel_pickup.tscn         — Small pickup mesh + Area3D
   target.tscn              — Target marker mesh + Area3D
-  camera_rig.tscn          — Node3D + Camera3D looking down
+  camera_rig.tscn          — Node3D + Camera3D looking down (-90° X rotation)
   hud.tscn                 — CanvasLayer + fuel bar
   levels/
     level_01.tscn          — First test level
@@ -41,7 +42,7 @@ resources/
   planet_medium.tres       — CelestialBodyData for a medium planet
 
 tests/
-  test_celestial_sim.gd    — Headless test: gravity math + integration
+  test_celestial_sim.gd    — Headless test: gravity math + integration (uses preload, untyped)
 ```
 
 ---

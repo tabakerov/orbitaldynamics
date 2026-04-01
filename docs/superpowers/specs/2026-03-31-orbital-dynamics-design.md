@@ -14,19 +14,25 @@ Hybrid physics approach:
 
 ```
 Main (Node3D)
+├── WorldEnvironment — procedural sky + ambient light
 ├── CelestialSimulation (Node) — autoload singleton
-├── Level (Node3D)
-│   ├── CelestialBody (Node3D) — visual + static collision, position driven by sim
+├── Level (Node3D) — loaded at runtime
+│   ├── CelestialBody (AnimatableBody3D) — visual + static collision, position driven by sim
 │   ├── FuelPickup (Area3D)
 │   └── Target (Area3D)
 ├── Ship (RigidBody3D)
 │   ├── Hull (MeshInstance3D + CollisionShape3D)
-│   ├── Engine_Front (Node3D) — mount point
-│   ├── Engine_Rear (Node3D)
-│   ├── Engine_Left (Node3D)
-│   └── Engine_Right (Node3D)
-└── CameraRig (Node3D)
-    └── Camera3D
+│   ├── MountFront (Node3D) — engine mount, rotated 180° so exhaust points forward
+│   ├── MountRear (Node3D) — engine mount, no rotation, exhaust points backward
+│   ├── MountLeft (Node3D) — engine mount, exhaust points left
+│   └── MountRight (Node3D) — engine mount, exhaust points right
+├── CameraRig (Node3D)
+│   └── Camera3D
+├── CanvasLayer
+│   └── HUD (Control)
+├── MenuLayer (CanvasLayer, process_mode=ALWAYS)
+│   └── LevelSelect (Control) — level select / pause menu
+└── DirectionalLight3D
 ```
 
 ## Ship System
@@ -35,19 +41,27 @@ Main (Node3D)
 - RigidBody3D with mass and collision shape.
 - Defines up to 4 mount points, each with: position offset from origin, base thrust direction, and slot name (front/rear/left/right).
 - Center of mass is a hull property. Different hulls could shift it; cargo will shift it in later iterations.
+- Engine mounts are oriented so exhaust points AWAY from the ship (physically correct thrust).
 
 ### Engines
 - Each engine is a scene instanced at a mount point at level load.
+- Class name: `ShipEngine` (avoids conflict with Godot's built-in `Engine` singleton).
 - Properties (configured per engine):
   - `max_thrust`: maximum force output
-  - `gimbal_range`: max deflection angle in degrees
+  - `gimbal_range_deg`: max deflection angle in degrees
   - `fuel_consumption_rate`: fuel units per second at full thrust
 - Runtime state:
-  - `active`: bool — toggled by face button / WASD
-  - `gimbal_angle`: float — controlled by thumbstick rotation / Q/E
+  - `active`: bool — true while face button / WASD is held
+  - `gimbal_angle`: float — per-engine, adjusted by stick rotation delta or Q/E
   - `thrust_magnitude`: 0.0–1.0 float — from analog trigger / Space (binary 1.0)
-- Force applied per engine per tick: `thrust_direction.rotated(gimbal_angle) * max_thrust * thrust_magnitude`, applied at the engine's global position. Torque emerges naturally from off-center force application.
+- Force applied per engine per tick: engine's `-global_transform.basis.z * max_thrust * thrust_magnitude`, applied at the engine's global position. Torque emerges naturally from off-center force application.
+- The engine node visually rotates to match gimbal_angle (`rotation.y`).
 - Levels may equip fewer than 4 engines. Some levels may have only 1.
+
+### Engine Visual Indicators
+- **Active light**: Red OmniLight3D (range 3, energy 0.5) at the mount point. On when engine is active, off when inactive.
+- **Exhaust mesh**: Small orange emissive box, visible only when active AND thrusting.
+- **Exhaust particles**: GPUParticles3D with billboard quads, orange-to-transparent gradient. Emits along +Z local (exhaust direction) only when active AND thrusting. Particles use `PARTICLE_BILLBOARD` mode to always face the camera.
 
 ### Fuel
 - Single shared fuel tank on the ship, initialized per level.
@@ -58,20 +72,27 @@ Main (Node3D)
 ## Controls
 
 ### Controller
-- **A/B/X/Y (face buttons)**: Toggle individual engines on/off. Mapping: Y=front, A=rear, X=left, B=right (matches spatial position on controller: Y is top, A is bottom, X is left, B is right).
+- **A/B/X/Y (face buttons)**: Hold to activate individual engines. Release to deactivate. Mapping: Y=front, A=rear, X=left, B=right (matches spatial position on controller).
 - **Right trigger (analog)**: Thrust magnitude for all active engines (0.0–1.0).
-- **Left thumbstick rotation**: Gimbal all active engines simultaneously within their gimbal limits. Rotating the stick CCW rotates engines CCW, CW rotates CW.
+- **Left thumbstick rotation**: Gimbal active engines. The angular velocity of the stick rotation is applied as a delta to each active engine's gimbal angle. Inactive engines keep their last angle. Releasing the stick preserves the current gimbal position.
 
 ### Keyboard
-- **W/A/S/D**: Toggle individual engines on/off (W=front, S=rear, A=left, D=right).
+- **W/A/S/D**: Hold to activate individual engines (W=front, S=rear, A=left, D=right). Release to deactivate.
 - **Space**: Thrust (binary, applies 1.0 magnitude to all active engines).
-- **Q/E**: Gimbal rotation — Q rotates CCW, E rotates CW. Incremental, not analog.
+- **Q/E**: Gimbal rotation — Q rotates CCW, E rotates CW. Incremental delta applied to active engines.
+
+### Menu Controls
+- **Escape / B (gamepad)**: Toggle pause menu from gameplay.
+- **Arrow keys / D-pad**: Navigate menu buttons.
+- **Enter / A (gamepad)**: Confirm menu selection.
+- **R / Start**: Quick restart level (bypasses menu).
 
 ## Celestial Simulation
 
 ### Integrator
 - Symplectic Euler, running in `_physics_process` at Godot's fixed timestep (default 60Hz).
 - Can substep internally if stability requires it for close encounters.
+- Autoload singleton registered as `CelestialSim` (no `class_name` to avoid autoload naming conflict).
 
 ### Celestial Body Properties
 - `position`: Vector3 (X/Z plane, Y=0)
@@ -87,21 +108,22 @@ Main (Node3D)
 The celestial simulation provides a function to compute net gravity at any point:
 
 ```gdscript
-func get_gravity_at(position: Vector3) -> Vector3:
-    var total = Vector3.ZERO
-    for body in celestial_bodies:
-        var offset = body.position - position
-        var dist = clamp(offset.length(), body.min_range, body.max_range)
-        if offset.length() > body.max_range:
+func get_gravity_at(pos: Vector3) -> Vector3:
+    var total := Vector3.ZERO
+    for i in _count:
+        var offset := _positions[i] - pos
+        var raw_dist := offset.length()
+        if raw_dist > _max_ranges[i]:
             continue
-        var strength = body.gravity_strength * body.mass / pow(dist, body.falloff_exponent)
+        var dist := clampf(raw_dist, _min_ranges[i], _max_ranges[i])
+        var strength := _gravity_strengths[i] * _masses[i] / pow(dist, _falloff_exponents[i])
         total += offset.normalized() * strength
     return total
 ```
 
 ### Visual Representation
-- Each celestial body has a corresponding Node3D scene with MeshInstance3D (visual) and static CollisionShape3D (for crash detection).
-- Position is set from the simulation each frame. These nodes have no Godot physics bodies.
+- Each celestial body has a corresponding AnimatableBody3D scene with MeshInstance3D (visual) and static CollisionShape3D (for crash detection).
+- Position is set from the simulation each frame. These nodes have no Godot physics bodies — position is driven directly.
 
 ## Movement Plane Constraint
 - All physics occur on the Y=0 plane (X/Z movement).
@@ -111,14 +133,15 @@ func get_gravity_at(position: Vector3) -> Vector3:
 ## Camera
 
 ### CameraRig (Node3D)
-- Position: directly follows ship X/Z position (no smoothing initially).
+- Position: follows ship X/Z position. Snaps immediately on level load via `set_target()`.
 - Rotation: matches ship's Y-axis rotation. Ship always appears to face "up" on screen; the world rotates around the player.
 - Fully automatic — no player camera control.
 
 ### Camera3D
-- Points straight down (-Y).
-- Fixed height above the plane.
-- Orthographic vs perspective and zoom behavior deferred to visual style pass.
+- Points straight down (-Y), rotated -90° around X axis.
+- Fixed height above the plane (60 units).
+- Perspective projection, fov configurable (default ~78°).
+- Explicitly set as `current` in `_ready()`.
 
 ## Level Structure
 
@@ -133,21 +156,36 @@ func get_gravity_at(position: Vector3) -> Vector3:
 - Ship overlaps Target Area3D → level complete.
 
 ### Lose Conditions
-- Collide with celestial body at high velocity → crash.
+- Collide with celestial body at high velocity → crash → level auto-restarts.
 - Out of fuel with no pickups remaining (soft fail — player drifts, can restart).
 
 ### Level Flow
-1. Level loads → celestial sim initializes with body data → ship spawns.
+1. Player selects level from menu → level loads → celestial sim initializes → ship spawns.
 2. Player has control.
-3. On win → show result, advance.
-4. On crash → offer restart.
-5. Player can manually restart at any time.
+3. On win → advance to next level, or return to menu if last level.
+4. On crash → level auto-restarts.
+5. Player can manually restart at any time (R / Start, or via pause menu).
+
+## Main Menu / Level Select
+
+- Shown on game launch and when pressing Escape during gameplay.
+- Dark background with title "ORBITAL DYNAMICS" and subtitle.
+- Level buttons generated dynamically from the `level_names` array.
+- **Restart Level** button appears when a level is active (auto-focused).
+- **Quit** button exits the game.
+- Game is paused while menu is visible. MenuLayer uses `process_mode=ALWAYS` to handle input during pause.
+- Gamepad navigation supported via focus system. A button / Enter confirms selection via explicit `_process` input check (Godot's built-in `ui_accept` doesn't fire for joypad when custom actions use the same button).
+
+## Environment
+
+- WorldEnvironment with ProceduralSkyMaterial for background.
+- Ambient light (energy 0.5, color 0.3/0.3/0.35) for base visibility.
+- DirectionalLight3D pointing down (energy 1.5) for main illumination.
 
 ## Out of Scope (First Iteration)
 - Visual style / art direction
 - Cargo pickup and delivery
 - Multiple hull types
 - Sound / music
-- UI beyond basic HUD (fuel gauge, level indicator)
 - Time warp / trajectory prediction
 - Deterministic replay
