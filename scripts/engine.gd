@@ -29,7 +29,10 @@ func _process(_delta: float) -> void:
 
 
 func set_gimbal_target(target: float) -> void:
-	gimbal_angle = clampf(target, -_gimbal_range_rad, _gimbal_range_rad)
+	if active:
+		gimbal_angle = clampf(target, -_gimbal_range_rad, _gimbal_range_rad)
+	else:
+		gimbal_angle = 0.0
 	rotation.y = gimbal_angle
 
 
