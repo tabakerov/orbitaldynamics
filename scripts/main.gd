@@ -54,8 +54,6 @@ func _load_level(index: int) -> void:
 	if ship:
 		_camera_rig.set_target(ship)
 		_hud.setup(ship)
-	else:
-		push_error("Level %d has no ship" % index)
 
 
 func _on_level_completed() -> void:
