@@ -30,13 +30,13 @@ func _process(_delta: float) -> void:
 
 func set_gimbal_target(target: float) -> void:
 	gimbal_angle = clampf(target, -_gimbal_range_rad, _gimbal_range_rad)
+	rotation.y = gimbal_angle
 
 
 func get_thrust_vector() -> Vector3:
 	if not active or thrust_magnitude <= 0.0:
 		return Vector3.ZERO
-	var local_dir := Vector3(0, 0, -1).rotated(Vector3.UP, gimbal_angle)
-	return global_transform.basis * local_dir * max_thrust * thrust_magnitude
+	return -global_transform.basis.z * max_thrust * thrust_magnitude
 
 
 func get_fuel_drain(delta: float) -> float:
