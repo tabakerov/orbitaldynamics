@@ -1,7 +1,6 @@
 extends Node3D
 
 @export var levels: Array[PackedScene] = []
-@export var level_names: Array[String] = ["Level 1"]
 
 var _current_level: Level
 var _level_index: int = 0
@@ -13,7 +12,10 @@ var _loading: bool = false
 
 
 func _ready() -> void:
-	_level_select.setup(level_names)
+	var names: Array[String] = []
+	for i in levels.size():
+		names.append("Level %d" % (i + 1))
+	_level_select.setup(names)
 	_level_select.level_selected.connect(_on_level_selected)
 	_level_select.restart_requested.connect(_on_restart_requested)
 	_level_select.quit_requested.connect(_on_quit_requested)
