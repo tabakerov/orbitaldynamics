@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/engine.gd" id="1"]
 
@@ -29,3 +29,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
 visible = false
 mesh = SubResource("SubResource_3")
 material_override = SubResource("SubResource_4")
+
+[node name="ActiveLight" type="OmniLight3D" parent="."]
+visible = false
+light_color = Color(1, 0.2, 0.1, 1)
+light_energy = 2.0
+omni_range = 3.0
+omni_attenuation = 1.5

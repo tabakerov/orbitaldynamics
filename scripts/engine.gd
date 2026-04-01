@@ -12,14 +12,17 @@ var thrust_magnitude: float = 0.0
 var _gimbal_range_rad: float
 
 @onready var _exhaust: MeshInstance3D = $Exhaust
+@onready var _active_light: OmniLight3D = $ActiveLight
 
 
 func _ready() -> void:
 	_gimbal_range_rad = deg_to_rad(gimbal_range_deg)
+	_active_light.visible = false
 
 
 func _process(_delta: float) -> void:
 	_exhaust.visible = active and thrust_magnitude > 0.0
+	_active_light.visible = active
 
 
 func set_gimbal_target(target: float) -> void:
