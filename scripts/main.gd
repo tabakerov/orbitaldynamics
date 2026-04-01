@@ -14,11 +14,13 @@ var _level_index: int = 0
 func _ready() -> void:
 	_level_select.setup(level_names)
 	_level_select.level_selected.connect(_on_level_selected)
+	_level_select.restart_requested.connect(_on_restart_requested)
+	_level_select.quit_requested.connect(_on_quit_requested)
 	_show_menu()
 
 
 func _show_menu() -> void:
-	_level_select.visible = true
+	_level_select.show_menu(_current_level != null)
 	_hud.visible = false
 	get_tree().paused = true
 
@@ -32,6 +34,15 @@ func _hide_menu() -> void:
 func _on_level_selected(index: int) -> void:
 	_hide_menu()
 	_load_level(index)
+
+
+func _on_restart_requested() -> void:
+	_hide_menu()
+	_load_level(_level_index)
+
+
+func _on_quit_requested() -> void:
+	get_tree().quit()
 
 
 func _load_level(index: int) -> void:
