@@ -24,12 +24,6 @@ colors = PackedColorArray(1, 0.7, 0.2, 1, 1, 0.3, 0.05, 0.8, 0.2, 0.05, 0.02, 0)
 [sub_resource type="GradientTexture1D" id="ramp_texture"]
 gradient = SubResource("color_ramp")
 
-[sub_resource type="StandardMaterial3D" id="particle_billboard_mat"]
-transparency = 1
-shading_mode = 0
-billboard_mode = 3
-vertex_color_use_as_albedo = true
-
 [sub_resource type="ParticleProcessMaterial" id="particle_mat"]
 direction = Vector3(0, 0, 1)
 spread = 15.0
@@ -37,9 +31,17 @@ initial_velocity_min = 2.0
 initial_velocity_max = 4.0
 gravity = Vector3(0, 0, 0)
 scale_min = 0.5
-scale_max = 1.0
 color = Color(1, 0.5, 0.1, 1)
 color_ramp = SubResource("ramp_texture")
+
+[sub_resource type="StandardMaterial3D" id="particle_billboard_mat"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="particle_mesh"]
 material = SubResource("particle_billboard_mat")
@@ -66,7 +68,7 @@ light_energy = 0.5
 omni_range = 3.0
 omni_attenuation = 1.5
 
-[node name="ExhaustParticles" type="GPUParticles3D" parent="."]
+[node name="ExhaustParticles" type="GPUParticles3D" parent="." unique_id=354913164]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
 emitting = false
 amount = 24

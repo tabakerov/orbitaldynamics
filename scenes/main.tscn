@@ -1,15 +1,29 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene format=3 uid="uid://rmlvcedhusx8"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" uid="uid://capv0jojx8jh8" path="res://scripts/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/camera_rig.tscn" id="2"]
-[ext_resource type="Script" path="res://scripts/hud.gd" id="3"]
-[ext_resource type="PackedScene" path="res://scenes/levels/level_01.tscn" id="4"]
+[ext_resource type="Script" uid="uid://ri8kx1vkrsko" path="res://scripts/hud.gd" id="3"]
+[ext_resource type="PackedScene" uid="uid://6hj1yrsnfljy" path="res://scenes/levels/level_01.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/level_select.gd" id="5"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.3, 0.3, 0.35, 1)
+ambient_light_energy = 0.5
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1")
-levels = [ExtResource("4")]
-level_names = Array[String](["Level 1"])
+levels = Array[PackedScene]([ExtResource("4")])
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
 
 [node name="CameraRig" parent="." instance=ExtResource("2")]
 
@@ -48,8 +62,8 @@ anchor_bottom = 0.92
 text = "Fuel: 100%"
 
 [node name="MenuLayer" type="CanvasLayer" parent="."]
-layer = 10
 process_mode = 3
+layer = 10
 
 [node name="LevelSelect" type="Control" parent="MenuLayer"]
 layout_mode = 3
@@ -97,8 +111,8 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Spacer" type="Control" parent="MenuLayer/LevelSelect/VBox"]
-layout_mode = 2
 custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
 
 [node name="LevelList" type="VBoxContainer" parent="MenuLayer/LevelSelect/VBox"]
 unique_name_in_owner = true
@@ -107,3 +121,4 @@ theme_override_constants/separation = 10
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 50, 0)
+light_energy = 1.5
