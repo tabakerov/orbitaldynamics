@@ -48,14 +48,13 @@ func show_menu(has_active_level: bool) -> void:
 		_buttons[0].call_deferred("grab_focus")
 
 
-func _input(event: InputEvent) -> void:
+func _process(_delta: float) -> void:
 	if not visible:
 		return
-	if event.is_action_pressed("ui_accept"):
+	if Input.is_action_just_pressed("ui_accept"):
 		var focused := get_viewport().gui_get_focus_owner()
 		if focused is Button:
 			focused.emit_signal("pressed")
-			get_viewport().set_input_as_handled()
 
 
 func _on_level_pressed(index: int) -> void:
