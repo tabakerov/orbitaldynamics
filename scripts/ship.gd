@@ -15,13 +15,12 @@ var fuel: float
 var max_fuel: float
 
 var _engines: Dictionary = {}
-var _gimbal: float = 0.0
 var _prev_stick_angle: float = 0.0
 var _stick_active: bool = false
 
 const STICK_DEADZONE: float = 0.2
 const GIMBAL_KEYBOARD_SPEED: float = 2.0
-const GIMBAL_STICK_SENSITIVITY: float = 1.0
+const GIMBAL_STICK_SENSITIVITY: float = 0.10
 
 @onready var _mount_front: Node3D = $MountFront
 @onready var _mount_rear: Node3D = $MountRear
@@ -76,11 +75,13 @@ func _update_thrust() -> void:
 
 
 func _update_gimbal(delta: float) -> void:
+	var gimbal_delta := 0.0
+
 	# Keyboard Q/E: incremental
 	if Input.is_action_pressed("gimbal_cw"):
-		_gimbal += GIMBAL_KEYBOARD_SPEED * delta
+		gimbal_delta += GIMBAL_KEYBOARD_SPEED * delta
 	if Input.is_action_pressed("gimbal_ccw"):
-		_gimbal -= GIMBAL_KEYBOARD_SPEED * delta
+		gimbal_delta -= GIMBAL_KEYBOARD_SPEED * delta
 
 	# Controller thumbstick: angular velocity of stick rotation
 	var stick := Vector2(
@@ -93,14 +94,14 @@ func _update_gimbal(delta: float) -> void:
 			var angle_delta := stick_angle - _prev_stick_angle
 			# Wrap to [-PI, PI] to handle crossing ±180°
 			angle_delta = fmod(angle_delta + PI, TAU) - PI
-			_gimbal += angle_delta * GIMBAL_STICK_SENSITIVITY
+			gimbal_delta += angle_delta * GIMBAL_STICK_SENSITIVITY
 		_prev_stick_angle = stick_angle
 		_stick_active = true
 	else:
 		_stick_active = false
 
 	for engine: ShipEngine in _engines.values():
-		engine.set_gimbal_target(_gimbal)
+		engine.apply_gimbal_delta(gimbal_delta)
 
 
 func _apply_gravity() -> void:

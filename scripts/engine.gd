@@ -28,9 +28,9 @@ func _process(_delta: float) -> void:
 	_particles.emitting = thrusting
 
 
-func set_gimbal_target(target: float) -> void:
-	if active:
-		gimbal_angle = clampf(target, -_gimbal_range_rad, _gimbal_range_rad)
+func apply_gimbal_delta(delta: float) -> void:
+	if active and delta != 0.0:
+		gimbal_angle = clampf(gimbal_angle + delta, -_gimbal_range_rad, _gimbal_range_rad)
 		rotation.y = gimbal_angle
 
 
