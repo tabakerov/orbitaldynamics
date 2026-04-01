@@ -40,7 +40,7 @@ func _ready() -> void:
 func _setup_engine(slot: String, scene: PackedScene, mount: Node3D) -> void:
 	if scene == null:
 		return
-	var engine := scene.instantiate() as Engine
+	var engine := scene.instantiate() as ShipEngine
 	mount.add_child(engine)
 	_engines[slot] = engine
 
@@ -68,7 +68,7 @@ func _try_toggle(action: String, slot: String) -> void:
 
 func _update_thrust() -> void:
 	var magnitude := Input.get_action_strength("thrust")
-	for engine: Engine in _engines.values():
+	for engine: ShipEngine in _engines.values():
 		engine.thrust_magnitude = magnitude
 
 
@@ -90,7 +90,7 @@ func _update_gimbal(delta: float) -> void:
 			_keyboard_gimbal -= GIMBAL_KEYBOARD_SPEED * delta
 		target = _keyboard_gimbal
 
-	for engine: Engine in _engines.values():
+	for engine: ShipEngine in _engines.values():
 		engine.set_gimbal_target(target)
 
 
@@ -102,7 +102,7 @@ func _apply_gravity() -> void:
 func _apply_engine_forces() -> void:
 	if fuel <= 0.0:
 		return
-	for engine: Engine in _engines.values():
+	for engine: ShipEngine in _engines.values():
 		var force := engine.get_thrust_vector()
 		if force.length_squared() > 0.0:
 			var offset := engine.global_position - global_position
@@ -113,7 +113,7 @@ func _drain_fuel(delta: float) -> void:
 	if fuel <= 0.0:
 		return
 	var drain := 0.0
-	for engine: Engine in _engines.values():
+	for engine: ShipEngine in _engines.values():
 		drain += engine.get_fuel_drain(delta)
 	if drain > 0.0:
 		fuel = maxf(fuel - drain, 0.0)

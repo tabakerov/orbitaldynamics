@@ -1,4 +1,4 @@
-class_name Engine
+class_name ShipEngine
 extends Node3D
 
 @export var max_thrust: float = 100.0
