@@ -13,6 +13,7 @@ var _gimbal_range_rad: float
 
 @onready var _exhaust: MeshInstance3D = $Exhaust
 @onready var _active_light: OmniLight3D = $ActiveLight
+@onready var _particles: GPUParticles3D = $ExhaustParticles
 
 
 func _ready() -> void:
@@ -21,8 +22,10 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	_exhaust.visible = active and thrust_magnitude > 0.0
+	var thrusting := active and thrust_magnitude > 0.0
+	_exhaust.visible = thrusting
 	_active_light.visible = active
+	_particles.emitting = thrusting
 
 
 func set_gimbal_target(target: float) -> void:
