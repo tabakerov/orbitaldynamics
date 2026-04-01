@@ -40,7 +40,11 @@ func _load_level(index: int) -> void:
 		await _current_level.tree_exited
 
 	_level_index = clampi(index, 0, levels.size() - 1)
-	_current_level = levels[_level_index].instantiate() as Level
+	var scene_instance := levels[_level_index].instantiate()
+	_current_level = scene_instance as Level
+	if not _current_level:
+		push_error("Failed to load level %d" % index)
+		return
 	add_child(_current_level)
 
 	_current_level.level_completed.connect(_on_level_completed)
@@ -48,8 +52,10 @@ func _load_level(index: int) -> void:
 
 	var ship := _current_level.get_ship()
 	if ship:
-		_camera_rig.target = ship
+		_camera_rig.set_target(ship)
 		_hud.setup(ship)
+	else:
+		push_error("Level %d has no ship" % index)
 
 
 func _on_level_completed() -> void:
