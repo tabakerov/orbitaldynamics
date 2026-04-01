@@ -55,15 +55,15 @@ func _physics_process(delta: float) -> void:
 
 
 func _handle_engine_toggles() -> void:
-	_try_toggle("engine_front", "front")
-	_try_toggle("engine_rear", "rear")
-	_try_toggle("engine_left", "left")
-	_try_toggle("engine_right", "right")
+	_set_engine_active("engine_front", "front")
+	_set_engine_active("engine_rear", "rear")
+	_set_engine_active("engine_left", "left")
+	_set_engine_active("engine_right", "right")
 
 
-func _try_toggle(action: String, slot: String) -> void:
-	if Input.is_action_just_pressed(action) and slot in _engines:
-		_engines[slot].active = not _engines[slot].active
+func _set_engine_active(action: String, slot: String) -> void:
+	if slot in _engines:
+		_engines[slot].active = Input.is_action_pressed(action)
 
 
 func _update_thrust() -> void:
