@@ -13,12 +13,14 @@ var _gravity_strengths: PackedFloat64Array
 var _falloff_exponents: PackedFloat64Array
 var _max_ranges: PackedFloat64Array
 var _min_ranges: PackedFloat64Array
+var _stationary: Array[bool]
 
 
 func initialize(
 	data: Array,
 	positions: PackedVector3Array,
-	velocities: PackedVector3Array
+	velocities: PackedVector3Array,
+	stationary: Array[bool] = [],
 ) -> void:
 	_count = data.size()
 	_positions = positions.duplicate()
@@ -28,12 +30,15 @@ func initialize(
 	_falloff_exponents = PackedFloat64Array()
 	_max_ranges = PackedFloat64Array()
 	_min_ranges = PackedFloat64Array()
-	for d in data:
+	_stationary = []
+	for i in data.size():
+		var d = data[i]
 		_masses.append(d.mass)
 		_gravity_strengths.append(d.gravity_strength)
 		_falloff_exponents.append(d.falloff_exponent)
 		_max_ranges.append(d.max_range)
 		_min_ranges.append(d.min_range)
+		_stationary.append(stationary[i] if i < stationary.size() else false)
 	active = true
 
 
@@ -47,6 +52,7 @@ func clear() -> void:
 	_falloff_exponents = PackedFloat64Array()
 	_max_ranges = PackedFloat64Array()
 	_min_ranges = PackedFloat64Array()
+	_stationary = []
 
 
 func _physics_process(delta: float) -> void:
@@ -75,6 +81,8 @@ func step(delta: float) -> void:
 
 	# Symplectic Euler: velocity first, then position
 	for i in _count:
+		if _stationary[i]:
+			continue
 		_velocities[i] += accels[i] * delta
 		_positions[i] += _velocities[i] * delta
 		# Enforce Y=0 plane constraint

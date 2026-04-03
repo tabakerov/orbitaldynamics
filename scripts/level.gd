@@ -20,15 +20,17 @@ func _init_celestial_sim() -> void:
 	var data: Array[CelestialBodyData] = []
 	var positions := PackedVector3Array()
 	var velocities := PackedVector3Array()
+	var stationary: Array[bool] = []
 
 	for i in bodies.size():
 		var body := bodies[i]
 		data.append(body.body_data)
 		positions.append(body.global_position)
 		velocities.append(body.initial_velocity)
+		stationary.append(body.stationary)
 		body.sim_index = i
 
-	CelestialSim.initialize(data, positions, velocities)
+	CelestialSim.initialize(data, positions, velocities, stationary)
 
 
 func _connect_ship() -> void:

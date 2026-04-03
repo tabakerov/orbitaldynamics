@@ -98,6 +98,7 @@ Main (Node3D)
 - `position`: Vector3 (X/Z plane, Y=0)
 - `velocity`: Vector3
 - `mass`: float — used for inter-body gravitational attraction
+- `stationary`: bool — if true, body stays fixed in place (no velocity/position updates from simulation) but still exerts gravity on other bodies and the ship. Useful for anchored obstacles, fixed stars, etc.
 - Tunable gravity parameters (for ship/object attraction):
   - `gravity_strength`: multiplier on base gravitational pull
   - `falloff_exponent`: default 2.0 (inverse square law), tweakable per body

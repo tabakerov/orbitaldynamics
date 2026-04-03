@@ -3,6 +3,8 @@ extends AnimatableBody3D
 
 @export var body_data: CelestialBodyData
 @export var initial_velocity: Vector3 = Vector3.ZERO
+## If true, this body stays fixed in place but still exerts gravity.
+@export var stationary: bool = false
 
 var sim_index: int = -1
 
