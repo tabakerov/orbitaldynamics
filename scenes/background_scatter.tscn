@@ -1,6 +1,41 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://urkxmiew8a77"]
 
-[ext_resource type="Script" path="res://scripts/background_scatter.gd" id="1"]
+[ext_resource type="Script" uid="uid://dxmx87s6nk4yf" path="res://scripts/background_scatter.gd" id="1"]
+[ext_resource type="Script" uid="uid://dmr01ayvykem6" path="res://scripts/scatter_entry.gd" id="2_jmpol"]
+[ext_resource type="ArrayMesh" uid="uid://0xigqosmblhn" path="res://resources/meshes/Collection/Cylinder.001.obj" id="3_oefpi"]
+[ext_resource type="ArrayMesh" uid="uid://dxt2udonk6jbf" path="res://resources/meshes/Collection/Cylinder.obj" id="4_m31ug"]
+[ext_resource type="ArrayMesh" uid="uid://ca8djyooofxuu" path="res://resources/meshes/Collection/Icosphere.001.obj" id="5_on3wt"]
+[ext_resource type="ArrayMesh" uid="uid://c3223tdk4pqvh" path="res://resources/meshes/Collection/Icosphere.002.obj" id="6_07wcu"]
+[ext_resource type="ArrayMesh" uid="uid://dyfvcgrv3bcod" path="res://resources/meshes/Collection/Icosphere.obj" id="7_ye3bi"]
 
-[node name="BackgroundScatter" type="Node3D"]
+[sub_resource type="Resource" id="Resource_k3igo"]
+script = ExtResource("2_jmpol")
+mesh = ExtResource("3_oefpi")
+count = 30
+random_rotation_y_only = true
+
+[sub_resource type="Resource" id="Resource_fn6k5"]
+script = ExtResource("2_jmpol")
+mesh = ExtResource("4_m31ug")
+count = 20
+random_rotation_y_only = true
+metadata/_custom_type_script = "uid://dmr01ayvykem6"
+
+[sub_resource type="Resource" id="Resource_mi08n"]
+script = ExtResource("2_jmpol")
+mesh = ExtResource("5_on3wt")
+metadata/_custom_type_script = "uid://dmr01ayvykem6"
+
+[sub_resource type="Resource" id="Resource_03dtd"]
+script = ExtResource("2_jmpol")
+mesh = ExtResource("6_07wcu")
+metadata/_custom_type_script = "uid://dmr01ayvykem6"
+
+[sub_resource type="Resource" id="Resource_hkwps"]
+script = ExtResource("2_jmpol")
+mesh = ExtResource("7_ye3bi")
+metadata/_custom_type_script = "uid://dmr01ayvykem6"
+
+[node name="BackgroundScatter" type="Node3D" unique_id=605665463]
 script = ExtResource("1")
+entries = Array[ExtResource("2_jmpol")]([SubResource("Resource_k3igo"), SubResource("Resource_fn6k5"), SubResource("Resource_mi08n"), SubResource("Resource_03dtd"), SubResource("Resource_hkwps")])

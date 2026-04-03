@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://byvtewimqt0ev"]
+
+[ext_resource type="Script" uid="uid://l8xcchvv582h" path="res://scripts/level.gd" id="1_ppbiy"]
+[ext_resource type="PackedScene" path="res://scenes/celestial_body.tscn" id="2_c6rld"]
+[ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_yklhy"]
+[ext_resource type="Resource" uid="uid://dpcnq1rf6ykbk" path="res://resources/planet_medium.tres" id="4_o4ql5"]
+[ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="5_4hx2o"]
+[ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="6_km0xc"]
+[ext_resource type="PackedScene" path="res://scenes/target.tscn" id="7_n536o"]
+[ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="8_m2jhg"]
+
+[sub_resource type="Resource" id="Resource_kfebt"]
+script = ExtResource("3_yklhy")
+mass = 100.0
+radius = 2.0
+
+[sub_resource type="Resource" id="Resource_t0hvh"]
+script = ExtResource("3_yklhy")
+mass = 50.0
+radius = 1.0
+
+[node name="Level01" type="Node3D" unique_id=1842903300]
+script = ExtResource("1_ppbiy")
+
+[node name="Planet" parent="." unique_id=399142064 instance=ExtResource("2_c6rld")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -46.6, 0, -187.6)
+body_data = SubResource("Resource_kfebt")
+initial_velocity = Vector3(0, 0, 9.5)
+
+[node name="Planet2" parent="." unique_id=1350557644 instance=ExtResource("2_c6rld")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 30.2, 0, -162.8)
+body_data = ExtResource("4_o4ql5")
+initial_velocity = Vector3(0, 0, -0.1)
+
+[node name="Planet3" parent="." unique_id=1586618680 instance=ExtResource("2_c6rld")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 109.8, 0, -162.4)
+body_data = SubResource("Resource_t0hvh")
+initial_velocity = Vector3(0, 0, -7)
+
+[node name="Ship" parent="." unique_id=507982834 instance=ExtResource("5_4hx2o")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1688194, 0, 0.22027588)
+front_engine_scene = ExtResource("6_km0xc")
+rear_engine_scene = ExtResource("6_km0xc")
+left_engine_scene = ExtResource("6_km0xc")
+right_engine_scene = ExtResource("6_km0xc")
+
+[node name="Target" parent="." unique_id=40697833 instance=ExtResource("7_n536o")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.22620964, 0, -112.87228)
+
+[node name="FuelPickup" parent="." unique_id=1855354826 instance=ExtResource("8_m2jhg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.112026, 0, -71.91403)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
+transform = Transform3D(1, 0, 0, 0, 0.6741477, 0.73859656, 0, -0.73859656, 0.6741477, 0, 8.4938345, 0)

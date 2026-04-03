@@ -17,6 +17,9 @@ scripts/
   celestial_body_data.gd   — Resource: per-body mass, gravity params, radius
   celestial_simulation.gd  — Autoload singleton (no class_name): N-body integrator + gravity query
   celestial_body.gd        — AnimatableBody3D: syncs visual position from sim
+  black_hole.gd            — BlackHole (extends CelestialBody): lensing visual setup
+  scatter_entry.gd         — ScatterEntry (Resource): mesh, count, scale/rotation params
+  background_scatter.gd    — BackgroundScatter (Node3D): procedural MultiMesh placement
   engine.gd                — ShipEngine (Node3D): thrust vector, gimbal, fuel drain, visual indicators
   ship.gd                  — Ship (RigidBody3D): hold-to-activate input, per-engine gimbal, fuel, gravity
   camera_rig.gd            — CameraRig (Node3D): follows ship position + Y rotation, explicit current camera
@@ -31,15 +34,24 @@ scenes/
   engine.tscn              — Engine body + exhaust mesh + particles + active light
   ship.tscn                — Hull mesh, collision, 4 mount points (exhaust away from ship)
   celestial_body.tscn      — Sphere mesh + collision, driven by sim
+  black_hole.tscn          — Lensing plane + collision, gravitational lensing shader
+  background_scatter.tscn  — Procedural background object placement
   fuel_pickup.tscn         — Small pickup mesh + Area3D
   target.tscn              — Target marker mesh + Area3D
   camera_rig.tscn          — Node3D + Camera3D looking down (-90° X rotation)
   hud.tscn                 — CanvasLayer + fuel bar
   levels/
-    level_01.tscn          — First test level
+    level_01.tscn          — First level
+    level_02.tscn          — Second level
 
 resources/
   planet_medium.tres       — CelestialBodyData for a medium planet
+  shaders/
+    black_hole.gdshader    — Gravitational lensing spatial shader
+  meshes/                  — Imported 3D meshes for background scatter
+
+tools/
+  orbit-planner.html       — Browser-based orbit configuration tool
 
 tests/
   test_celestial_sim.gd    — Headless test: gravity math + integration (uses preload, untyped)

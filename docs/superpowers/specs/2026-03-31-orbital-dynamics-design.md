@@ -147,9 +147,11 @@ func get_gravity_at(pos: Vector3) -> Vector3:
 
 ### Level Definition (one scene per level)
 - Celestial body initial conditions: position, velocity, mass, tunable gravity params.
+- Black holes: same gravity as planets, with gravitational lensing visual effect.
 - Ship spawn: position, rotation, equipped engines (which slots filled), starting fuel.
 - Target: Area3D at a position.
 - Fuel pickups: Area3D nodes with fuel amount.
+- BackgroundScatter: procedural background decoration (rocks, stars, debris).
 - Later iteration: cargo pickup + delivery points.
 
 ### Win Condition
@@ -170,11 +172,56 @@ func get_gravity_at(pos: Vector3) -> Vector3:
 
 - Shown on game launch and when pressing Escape during gameplay.
 - Dark background with title "ORBITAL DYNAMICS" and subtitle.
-- Level buttons generated dynamically from the `level_names` array.
+- Level buttons generated dynamically from the `levels` array ("Level 1", "Level 2", etc.).
 - **Restart Level** button appears when a level is active (auto-focused).
 - **Quit** button exits the game.
 - Game is paused while menu is visible. MenuLayer uses `process_mode=ALWAYS` to handle input during pause.
 - Gamepad navigation supported via focus system. A button / Enter confirms selection via explicit `_process` input check (Godot's built-in `ui_accept` doesn't fire for joypad when custom actions use the same button).
+
+## Black Holes
+
+Black holes extend CelestialBody — identical gravity behavior, different visuals.
+
+### Visual Effect
+- PlaneMesh at the black hole position with a spatial shader (`black_hole.gdshader`).
+- Shader samples `hint_screen_texture` and applies radial UV distortion (gravitational lensing).
+- Chromatic aberration: RGB channels displaced differently near center.
+- Dark event horizon at center.
+- Glowing accretion ring (configurable color, intensity, size).
+- Edge fade for seamless blending with surroundings.
+
+### Configurable Parameters (ShaderMaterial)
+- `distortion`: lensing strength
+- `horizon_size`: event horizon radius
+- `ring_size`, `ring_color`, `ring_intensity`: accretion disk appearance
+- `edge_fade_start`: where the effect begins to fade
+
+### Scene Structure
+```
+BlackHole (AnimatableBody3D)
+├── CollisionShape3D (SphereShape3D)
+└── LensingMesh (MeshInstance3D + PlaneMesh + lensing shader)
+```
+
+## Background Scatter
+
+Procedural background decoration system using MultiMeshInstance3D for performance.
+
+### BackgroundScatter (Node3D)
+- `entries: Array[ScatterEntry]` — list of object types to scatter
+- `volume_size: Vector3` — scatter volume (centered on node)
+- `volume_offset: Vector3` — offset the volume center
+- `seed_value: int` — RNG seed for reproducibility (0 = hash of node name)
+
+### ScatterEntry (Resource)
+- `mesh: Mesh` — mesh to scatter
+- `material_override: Material` — optional material
+- `count: int` — number of instances
+- `scale_min / scale_max: float` — random scale range
+- `random_rotation: bool` — randomize orientation
+- `random_rotation_y_only: bool` — only rotate around Y axis
+
+Shadows disabled on scatter instances for performance.
 
 ## Environment
 
@@ -182,8 +229,17 @@ func get_gravity_at(pos: Vector3) -> Vector3:
 - Ambient light (energy 0.5, color 0.3/0.3/0.35) for base visibility.
 - DirectionalLight3D pointing down (energy 1.5) for main illumination.
 
+## Tools
+
+### Orbit Planner (`tools/orbit-planner.html`)
+- Browser-based interactive tool for testing celestial body configurations.
+- Same symplectic Euler integrator as the game.
+- Drag bodies to reposition, Shift+drag to set velocity vectors.
+- Orbital path preview with configurable steps/dt.
+- Ship spawn marker showing gravity drift.
+- Export to Godot scene snippet format.
+
 ## Out of Scope (First Iteration)
-- Visual style / art direction
 - Cargo pickup and delivery
 - Multiple hull types
 - Sound / music

@@ -20,6 +20,10 @@ config/run/main_scene="res://scenes/main.tscn"
 
 CelestialSim="*res://scripts/celestial_simulation.gd"
 
+[filesystem]
+
+import/blender/enabled=false
+
 [input]
 
 engine_front={
