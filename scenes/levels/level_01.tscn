@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://6hj1yrsnfljy"]
 
 [ext_resource type="Script" uid="uid://l8xcchvv582h" path="res://scripts/level.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/celestial_body.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/planet.tscn" id="2"]
 [ext_resource type="Resource" uid="uid://dpcnq1rf6ykbk" path="res://resources/planet_medium.tres" id="3"]
 [ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_t0hvh"]
 [ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="4"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="9_kfebt"]
 [ext_resource type="PackedScene" path="res://scenes/black_hole.tscn" id="10_r72dd"]
+[ext_resource type="Resource" path="res://resources/planet_earth.tres" id="11_earth"]
+[ext_resource type="Resource" path="res://resources/planet_desert.tres" id="12_desert"]
 
 [sub_resource type="Resource" id="Resource_kfebt"]
 script = ExtResource("3_t0hvh")
@@ -27,11 +29,13 @@ script = ExtResource("1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.63118, 0, -73.466354)
 body_data = SubResource("Resource_kfebt")
 initial_velocity = Vector3(0, 0, 9.5)
+visual_data = ExtResource("11_earth")
 
 [node name="Planet2" parent="." unique_id=1350557644 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3688202, 0, -74.26636)
 body_data = ExtResource("3")
 initial_velocity = Vector3(0, 0, -0.1)
+visual_data = ExtResource("12_desert")
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1688194, 0, 0.22027588)
@@ -54,6 +58,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -30, -55.868397)
 volume_size = Vector3(300, 50, 300)
 
 [node name="BlackHole" parent="." unique_id=2091670237 instance=ExtResource("10_r72dd")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -48.742867, -31.841965)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.2191772, -46.630135)
 lensing_radius = 10.0
 body_data = SubResource("Resource_r72dd")
+stationary = true
