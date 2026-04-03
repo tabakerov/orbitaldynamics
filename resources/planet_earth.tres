@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="PlanetVisualData" format=3]
+
+[ext_resource type="Script" path="res://scripts/planet_visual_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+sea_level = 0.45
+water_color_shallow = Color(0.3, 0.6, 0.8, 1)
+water_color_deep = Color(0.05, 0.1, 0.3, 1)
+wave_intensity = 0.3
+wave_speed = 0.5
+biome_vegetation = 0.6
+biome_sand = 0.2
+biome_rock = 0.2
+color_vegetation = Color(0.2, 0.55, 0.15, 1)
+color_sand = Color(0.85, 0.75, 0.45, 1)
+color_rock = Color(0.45, 0.42, 0.4, 1)
+mountain_intensity = 0.3
+snow_level = 0.7
+snow_color = Color(0.95, 0.95, 0.98, 1)
+cloud_coverage = 0.4
+cloud_color = Color(1, 1, 1, 1)
+cloud_rotation_speed = 0.05
+atmosphere_density = 0.5
+atmosphere_color = Color(0.3, 0.5, 1, 1)
+atmosphere_radius = 1.15
+atmosphere_rayleigh_strength = 1.0
+atmosphere_mie_strength = 0.3
+atmosphere_steps = 8
+cloud_shadows_enabled = false
+seed = 42
+noise_scale = 2.0
