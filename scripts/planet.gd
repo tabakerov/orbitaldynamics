@@ -7,6 +7,7 @@ var _clouds_mesh: MeshInstance3D
 var _surface_material: ShaderMaterial
 var _clouds_material: ShaderMaterial
 var _atmosphere_material: ShaderMaterial
+var _sun_light: DirectionalLight3D
 
 const SURFACE_SHADER = preload("res://resources/shaders/planet_surface.gdshader")
 const CLOUDS_SHADER = preload("res://resources/shaders/planet_clouds.gdshader")
@@ -14,7 +15,7 @@ const ATMOSPHERE_SHADER = preload("res://resources/shaders/planet_atmosphere.gds
 
 
 func _setup_visuals() -> void:
-	if not body_data:
+	if not body_data or not visual_data:
 		return
 
 	var r := body_data.radius
@@ -32,19 +33,21 @@ func _setup_visuals() -> void:
 	# Surface
 	_surface_material = _create_surface_material(terrain_tex, biome_tex, r)
 	var surface := $Surface as MeshInstance3D
-	var surface_mesh := surface.mesh as SphereMesh
+	var surface_mesh := surface.mesh.duplicate() as SphereMesh
 	surface_mesh.radius = r
 	surface_mesh.height = r * 2.0
+	surface.mesh = surface_mesh
 	surface.material_override = _surface_material
 
 	# Clouds
 	if visual_data.cloud_coverage > 0.0:
 		_clouds_material = _create_clouds_material(cloud_tex)
 		_clouds_mesh = $Clouds as MeshInstance3D
-		var clouds_mesh_res := _clouds_mesh.mesh as SphereMesh
+		var clouds_mesh_res := _clouds_mesh.mesh.duplicate() as SphereMesh
 		var cloud_r := r * 1.005
 		clouds_mesh_res.radius = cloud_r
 		clouds_mesh_res.height = cloud_r * 2.0
+		_clouds_mesh.mesh = clouds_mesh_res
 		_clouds_mesh.material_override = _clouds_material
 		_clouds_mesh.visible = true
 	else:
@@ -54,14 +57,18 @@ func _setup_visuals() -> void:
 	if visual_data.atmosphere_density > 0.0:
 		_atmosphere_material = _create_atmosphere_material(cloud_tex, r)
 		var atmo := $Atmosphere as MeshInstance3D
-		var atmo_mesh := atmo.mesh as SphereMesh
+		var atmo_mesh := atmo.mesh.duplicate() as SphereMesh
 		var atmo_r := r * visual_data.atmosphere_radius
 		atmo_mesh.radius = atmo_r
 		atmo_mesh.height = atmo_r * 2.0
+		atmo.mesh = atmo_mesh
 		atmo.material_override = _atmosphere_material
 		atmo.visible = true
 	else:
 		($Atmosphere as MeshInstance3D).visible = false
+
+	# Cache sun light reference
+	_sun_light = _find_directional_light(get_tree().root)
 
 
 func _process(delta: float) -> void:
@@ -69,16 +76,8 @@ func _process(delta: float) -> void:
 		_clouds_mesh.rotate_y(visual_data.cloud_rotation_speed * delta)
 
 	if _atmosphere_material:
-		var sun_dir := _get_sun_direction()
+		var sun_dir := -_sun_light.global_transform.basis.z if _sun_light else Vector3(0.0, -1.0, 0.0)
 		_atmosphere_material.set_shader_parameter("sun_direction", sun_dir)
-
-
-func _get_sun_direction() -> Vector3:
-	# Find DirectionalLight3D in the scene for sun direction
-	var light := _find_directional_light(get_tree().root)
-	if light:
-		return -light.global_transform.basis.z
-	return Vector3(0.0, -1.0, 0.0)
 
 
 func _find_directional_light(node: Node) -> DirectionalLight3D:

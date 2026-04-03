@@ -29,9 +29,11 @@ uniform float noise_scale = 2.0;
 
 varying float v_height;
 varying float v_noise;
+varying vec3 v_model_pos;
 
 void vertex() {
-	vec3 unit_pos = normalize(VERTEX);
+	vec3 unit_pos = v_model_pos;
+	v_model_pos = unit_pos;
 	vec3 sample_pos = unit_pos * noise_scale * 0.5 + 0.5;
 	float n = texture(terrain_noise, sample_pos).r;
 
@@ -55,7 +57,7 @@ void fragment() {
 		col = mix(water_color_deep, water_color_shallow, coast_proximity);
 
 		// Animated waves
-		vec3 wave_sample = normalize(VERTEX) * noise_scale * 3.0 * 0.5 + 0.5;
+		vec3 wave_sample = v_model_pos * noise_scale * 3.0 * 0.5 + 0.5;
 		wave_sample.x += TIME * wave_speed * 0.1;
 		wave_sample.z += TIME * wave_speed * 0.07;
 		float wave = texture(terrain_noise, wave_sample).r;
@@ -66,7 +68,7 @@ void fragment() {
 		ROUGHNESS = 0.2;
 	} else {
 		// Land — biome selection
-		vec3 biome_sample = normalize(VERTEX) * noise_scale * 0.7 * 0.5 + 0.5;
+		vec3 biome_sample = v_model_pos * noise_scale * 0.7 * 0.5 + 0.5;
 		float bn = texture(biome_noise, biome_sample).r;
 
 		// Normalize weights
