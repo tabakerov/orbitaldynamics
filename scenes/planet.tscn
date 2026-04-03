@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/planet.gd" id="1"]
+
+[sub_resource type="SphereShape3D" id="collision"]
+radius = 3.0
+
+[sub_resource type="SphereMesh" id="surface_mesh"]
+radius = 3.0
+height = 6.0
+radial_segments = 128
+rings = 64
+
+[sub_resource type="SphereMesh" id="cloud_mesh"]
+radius = 3.015
+height = 6.03
+radial_segments = 64
+rings = 32
+
+[sub_resource type="SphereMesh" id="atmo_mesh"]
+radius = 3.45
+height = 6.9
+radial_segments = 32
+rings = 16
+
+[node name="Planet" type="AnimatableBody3D"]
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("collision")
+
+[node name="Surface" type="MeshInstance3D" parent="."]
+mesh = SubResource("surface_mesh")
+
+[node name="Clouds" type="MeshInstance3D" parent="."]
+mesh = SubResource("cloud_mesh")
+visible = false
+
+[node name="Atmosphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("atmo_mesh")
+visible = false
