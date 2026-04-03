@@ -16,7 +16,7 @@ extends Resource
 @export_range(0.0, 1.0) var wave_intensity: float = 0.3
 
 ## Wave animation speed.
-@export var wave_speed: float = 0.5
+@export_range(0.0, 5.0) var wave_speed: float = 0.5
 
 ## --- Biomes ---
 
@@ -58,7 +58,7 @@ extends Resource
 @export var cloud_color: Color = Color(1.0, 1.0, 1.0)
 
 ## Independent rotation speed for cloud layer (rad/s).
-@export var cloud_rotation_speed: float = 0.05
+@export_range(0.0, 1.0) var cloud_rotation_speed: float = 0.05
 
 ## --- Atmosphere ---
 
