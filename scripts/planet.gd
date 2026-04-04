@@ -96,7 +96,7 @@ func _process(delta: float) -> void:
 
 	# Sun direction
 	if _atmosphere_material:
-		var sun_dir := -_sun_light.global_transform.basis.z if _sun_light else Vector3(0.0, -1.0, 0.0)
+		var sun_dir := _sun_light.global_transform.basis.z if _sun_light else Vector3(0.0, 1.0, 0.0)
 		_atmosphere_material.set_shader_parameter("sun_direction", sun_dir)
 
 
