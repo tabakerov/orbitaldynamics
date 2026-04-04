@@ -124,6 +124,8 @@ func _update_shader_params() -> void:
 		_surface_material.set_shader_parameter("snow_color", visual_data.snow_color)
 		_surface_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
 		_surface_material.set_shader_parameter("ao_strength", visual_data.ao_strength)
+		_surface_material.set_shader_parameter("atmosphere_haze_density", visual_data.atmosphere_density)
+		_surface_material.set_shader_parameter("atmosphere_haze_color", visual_data.atmosphere_color)
 
 	# Clouds
 	if _clouds_material:
