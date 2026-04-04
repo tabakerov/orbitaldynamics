@@ -125,6 +125,7 @@ func _update_shader_params() -> void:
 		_atmosphere_material.set_shader_parameter("atmosphere_color", visual_data.atmosphere_color)
 		_atmosphere_material.set_shader_parameter("rayleigh_strength", visual_data.atmosphere_rayleigh_strength)
 		_atmosphere_material.set_shader_parameter("mie_strength", visual_data.atmosphere_mie_strength)
+		_atmosphere_material.set_shader_parameter("atmosphere_falloff", visual_data.atmosphere_falloff)
 		_atmosphere_material.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
 		_atmosphere_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
 		_atmosphere_material.set_shader_parameter("cloud_color", visual_data.cloud_color)

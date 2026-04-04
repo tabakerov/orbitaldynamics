@@ -80,6 +80,9 @@ extends Resource
 ## Mie forward-scattering strength.
 @export_range(0.0, 2.0) var atmosphere_mie_strength: float = 0.3
 
+## Density falloff from surface to edge. Low = uniform fog, high = concentrated near surface.
+@export_range(0.05, 1.0) var atmosphere_falloff: float = 0.35
+
 ## Ray-march step count (quality vs performance).
 @export_range(4, 16) var atmosphere_steps: int = 8
 

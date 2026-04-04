@@ -7,6 +7,7 @@ uniform float atmosphere_density : hint_range(0.0, 1.0) = 0.5;
 uniform vec3 atmosphere_color : source_color = vec3(0.3, 0.5, 1.0);
 uniform float rayleigh_strength : hint_range(0.0, 5.0) = 1.0;
 uniform float mie_strength : hint_range(0.0, 2.0) = 0.3;
+uniform float atmosphere_falloff : hint_range(0.05, 1.0) = 0.35;
 uniform int atmosphere_steps : hint_range(4, 16) = 8;
 uniform vec3 sun_direction = vec3(0.0, -1.0, 0.0);
 
@@ -66,7 +67,7 @@ void fragment() {
 		vec3 light_dir = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
 		float cos_theta = dot(rd, light_dir);
 		float step_size = (ray_end - ray_start) / float(atmosphere_steps);
-		float scale_height = (atmosphere_radius - planet_radius) * 0.35;
+		float scale_height = (atmosphere_radius - planet_radius) * atmosphere_falloff;
 		float atmo_thickness = atmosphere_radius - planet_radius;
 
 		for (int i = 0; i < atmosphere_steps; i++) {
