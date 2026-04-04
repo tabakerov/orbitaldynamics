@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, unshaded, cull_back, depth_draw_never;
+render_mode blend_add, unshaded, cull_front, depth_draw_never;
 
 uniform float planet_radius = 1.0;
 uniform float atmosphere_radius = 1.15;
@@ -11,12 +11,13 @@ uniform int atmosphere_steps : hint_range(4, 16) = 8;
 
 uniform vec3 sun_direction = vec3(0.0, -1.0, 0.0);
 
-// Optional cloud shadow sampling
 uniform bool cloud_shadows_enabled = false;
 uniform sampler3D cloud_noise;
 uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.0;
 uniform float cloud_noise_scale = 2.0;
 uniform float cloud_shell_radius = 1.005;
+
+varying vec3 v_model_pos;
 
 vec2 ray_sphere(vec3 ro, vec3 rd, float radius) {
 	float b = dot(ro, rd);
@@ -39,13 +40,16 @@ float mie_phase(float cos_theta, float g) {
 	return (1.0 - g2) / (4.0 * PI * pow(denom, 1.5));
 }
 
-void fragment() {
-	// Ray in model space (sphere centered at origin)
-	vec3 ro = (inverse(MODEL_MATRIX) * vec4(CAMERA_POSITION_WORLD, 1.0)).xyz;
-	vec3 frag_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	vec3 rd = normalize((inverse(MODEL_MATRIX) * vec4(normalize(frag_world - CAMERA_POSITION_WORLD), 0.0)).xyz);
+void vertex() {
+	v_model_pos = VERTEX;
+}
 
-	// Find full atmosphere intersection
+void fragment() {
+	// Camera and ray direction in model space
+	vec3 ro = (inverse(MODEL_MATRIX) * vec4(CAMERA_POSITION_WORLD, 1.0)).xyz;
+	vec3 rd = normalize(v_model_pos - ro);
+
+	// Atmosphere intersection
 	vec2 atmo_hit = ray_sphere(ro, rd, atmosphere_radius);
 
 	vec3 scattered = vec3(0.0);
@@ -71,7 +75,6 @@ void fragment() {
 			float t = ray_start + (float(i) + 0.5) * step_size;
 			vec3 sample_point = ro + rd * t;
 			float altitude = length(sample_point) - planet_radius;
-			float normalized_alt = altitude / (atmosphere_radius - planet_radius);
 			float density = exp(-altitude / scale_height) * step_size;
 
 			// Planet self-shadow
@@ -98,7 +101,6 @@ void fragment() {
 		}
 	}
 
-	float alpha = 1.0 - exp(-optical_depth * atmosphere_density * 4.0);
-	ALBEDO = scattered / max(optical_depth * atmosphere_density, 0.001);
-	ALPHA = alpha;
+	ALBEDO = scattered;
+	ALPHA = clamp(optical_depth * atmosphere_density, 0.0, 1.0);
 }
