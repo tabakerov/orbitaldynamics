@@ -101,10 +101,11 @@ void fragment() {
 		SPECULAR = 0.1;
 	}
 
-	// Atmospheric haze — Fresnel: edges get more tinted by atmosphere
+	// Atmospheric haze — base coverage + Fresnel edge enhancement
 	if (atmosphere_haze_density > 0.0) {
 		float fresnel = 1.0 - max(dot(NORMAL, VIEW), 0.0);
-		float haze = pow(fresnel, 3.0) * atmosphere_haze_density;
+		// density controls base opacity, fresnel adds extra at edges
+		float haze = clamp(atmosphere_haze_density + pow(fresnel, 2.0) * atmosphere_haze_density, 0.0, 1.0);
 		col = mix(col, atmosphere_haze_color, haze);
 	}
 
