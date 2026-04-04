@@ -24,10 +24,6 @@ uniform float max_displacement = 0.5;
 uniform float snow_level : hint_range(0.0, 1.0) = 0.7;
 uniform vec3 snow_color : source_color = vec3(0.95, 0.95, 0.98);
 
-// Atmospheric haze on surface
-uniform float atmosphere_haze_density : hint_range(0.0, 1.0) = 0.0;
-uniform vec3 atmosphere_haze_color : source_color = vec3(0.3, 0.5, 1.0);
-
 // Noise sampling
 uniform float noise_scale = 2.0;
 
@@ -99,14 +95,6 @@ void fragment() {
 
 		ROUGHNESS = 0.8;
 		SPECULAR = 0.1;
-	}
-
-	// Atmospheric haze — base coverage + Fresnel edge enhancement
-	if (atmosphere_haze_density > 0.0) {
-		float fresnel = 1.0 - max(dot(NORMAL, VIEW), 0.0);
-		// density controls base opacity, fresnel adds extra at edges
-		float haze = clamp(atmosphere_haze_density + pow(fresnel, 2.0) * atmosphere_haze_density, 0.0, 1.0);
-		col = mix(col, atmosphere_haze_color, haze);
 	}
 
 	ALBEDO = col;

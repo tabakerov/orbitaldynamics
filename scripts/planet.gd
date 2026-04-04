@@ -52,16 +52,11 @@ func _setup_visuals() -> void:
 	surface.mesh = surface_mesh
 	surface.material_override = _surface_material
 
-	# Clouds
-	_clouds_material = ShaderMaterial.new()
-	_clouds_material.shader = CLOUDS_SHADER
-	_clouds_material.set_shader_parameter("cloud_noise", cloud_tex)
+	# Clouds mesh hidden — clouds are now volumetric in atmosphere shader
 	_clouds_mesh = $Clouds as MeshInstance3D
-	var clouds_mesh_res := _clouds_mesh.mesh.duplicate() as SphereMesh
-	_clouds_mesh.mesh = clouds_mesh_res
-	_clouds_mesh.material_override = _clouds_material
+	_clouds_mesh.visible = false
 
-	# Atmosphere
+	# Atmosphere (includes volumetric clouds)
 	_atmosphere_material = ShaderMaterial.new()
 	_atmosphere_material.shader = ATMOSPHERE_SHADER
 	_atmosphere_material.set_shader_parameter("cloud_noise", cloud_tex)
@@ -89,10 +84,6 @@ func _process(delta: float) -> void:
 
 	# Reactive: push current visual_data to shaders every frame
 	_update_shader_params()
-
-	# Cloud rotation
-	if _clouds_mesh and visual_data.cloud_coverage > 0.0:
-		_clouds_mesh.rotate_y(visual_data.cloud_rotation_speed * delta)
 
 	# Sun direction
 	if _atmosphere_material:
@@ -124,23 +115,8 @@ func _update_shader_params() -> void:
 		_surface_material.set_shader_parameter("snow_color", visual_data.snow_color)
 		_surface_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
 		_surface_material.set_shader_parameter("ao_strength", visual_data.ao_strength)
-		_surface_material.set_shader_parameter("atmosphere_haze_density", visual_data.atmosphere_density)
-		_surface_material.set_shader_parameter("atmosphere_haze_color", visual_data.atmosphere_color)
 
-	# Clouds
-	if _clouds_material:
-		_clouds_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
-		_clouds_material.set_shader_parameter("cloud_color", visual_data.cloud_color)
-		_clouds_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
-	if _clouds_mesh:
-		_clouds_mesh.visible = visual_data.cloud_coverage > 0.0
-		var cloud_r := r * visual_data.cloud_height
-		var cmesh := _clouds_mesh.mesh as SphereMesh
-		if cmesh and not is_equal_approx(cmesh.radius, cloud_r):
-			cmesh.radius = cloud_r
-			cmesh.height = cloud_r * 2.0
-
-	# Atmosphere
+	# Atmosphere (includes volumetric clouds)
 	if _atmosphere_material:
 		var atmo_r := r * visual_data.atmosphere_radius
 		_atmosphere_material.set_shader_parameter("planet_radius", r)
@@ -150,10 +126,11 @@ func _update_shader_params() -> void:
 		_atmosphere_material.set_shader_parameter("rayleigh_strength", visual_data.atmosphere_rayleigh_strength)
 		_atmosphere_material.set_shader_parameter("mie_strength", visual_data.atmosphere_mie_strength)
 		_atmosphere_material.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
-		_atmosphere_material.set_shader_parameter("cloud_shadows_enabled", visual_data.cloud_shadows_enabled)
 		_atmosphere_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
+		_atmosphere_material.set_shader_parameter("cloud_color", visual_data.cloud_color)
 		_atmosphere_material.set_shader_parameter("cloud_noise_scale", visual_data.noise_scale)
 		_atmosphere_material.set_shader_parameter("cloud_shell_radius", r * visual_data.cloud_height)
+		_atmosphere_material.set_shader_parameter("cloud_thickness", 0.15)
 	if _atmosphere_mesh:
 		_atmosphere_mesh.visible = visual_data.atmosphere_density > 0.0
 		var atmo_r := r * visual_data.atmosphere_radius
