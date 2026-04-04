@@ -50,60 +50,58 @@ void fragment() {
 
 	// Atmosphere shell intersection
 	vec2 atmo_hit = ray_sphere(ro, rd, atmosphere_radius);
-	if (atmo_hit.x < 0.0 && atmo_hit.y < 0.0) {
-		ALPHA = 0.0;
-		return;
-	}
 
-	float ray_start = max(atmo_hit.x, 0.0);
-	float ray_end = atmo_hit.y;
-
-	// Planet body intersection — ray ends at planet surface
-	vec2 planet_hit = ray_sphere(ro, rd, planet_radius);
-	if (planet_hit.x > 0.0) {
-		ray_end = min(ray_end, planet_hit.x);
-	}
-
-	// Light direction in model space
-	vec3 light_dir = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
-	float cos_theta = dot(rd, light_dir);
-
-	float step_size = (ray_end - ray_start) / float(atmosphere_steps);
-	float optical_depth = 0.0;
 	vec3 scattered = vec3(0.0);
+	float optical_depth = 0.0;
 
-	float scale_height = (atmosphere_radius - planet_radius) * 0.4;
+	if (atmo_hit.x >= 0.0 || atmo_hit.y >= 0.0) {
+		float ray_start = max(atmo_hit.x, 0.0);
+		float ray_end = atmo_hit.y;
 
-	for (int i = 0; i < atmosphere_steps; i++) {
-		float t = ray_start + (float(i) + 0.5) * step_size;
-		vec3 sample_point = ro + rd * t;
-		float altitude = length(sample_point) - planet_radius;
-		float density = exp(-altitude / scale_height) * step_size;
-
-		// Planet self-shadow: check if sun ray from this point hits the planet
-		vec2 shadow_hit = ray_sphere(sample_point, light_dir, planet_radius);
-		float shadow = (shadow_hit.x > 0.0) ? 0.0 : 1.0;
-
-		// Cloud shadow (optional)
-		if (cloud_shadows_enabled && shadow > 0.0 && cloud_coverage > 0.0) {
-			// Find where sun ray intersects cloud shell
-			vec2 cloud_hit = ray_sphere(sample_point, light_dir, cloud_shell_radius);
-			if (cloud_hit.x > 0.0) {
-				vec3 cloud_point = sample_point + light_dir * cloud_hit.x;
-				vec3 cloud_uv = normalize(cloud_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
-				float cn = texture(cloud_noise, cloud_uv).r;
-				float cloud_threshold = 1.0 - cloud_coverage;
-				float cloud_shadow = smoothstep(cloud_threshold - 0.05, cloud_threshold + 0.05, cn);
-				shadow *= (1.0 - cloud_shadow * 0.7);
-			}
+		// Planet body intersection — ray ends at planet surface
+		vec2 planet_hit = ray_sphere(ro, rd, planet_radius);
+		if (planet_hit.x > 0.0) {
+			ray_end = min(ray_end, planet_hit.x);
 		}
 
-		// Accumulate
-		optical_depth += density;
+		// Light direction in model space
+		vec3 light_dir = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
+		float cos_theta = dot(rd, light_dir);
 
-		float rayleigh = rayleigh_phase(cos_theta) * rayleigh_strength;
-		float mie = mie_phase(cos_theta, 0.76) * mie_strength;
-		scattered += density * shadow * (atmosphere_color * rayleigh + vec3(mie));
+		float step_size = (ray_end - ray_start) / float(atmosphere_steps);
+
+		float scale_height = (atmosphere_radius - planet_radius) * 0.4;
+
+		for (int i = 0; i < atmosphere_steps; i++) {
+			float t = ray_start + (float(i) + 0.5) * step_size;
+			vec3 sample_point = ro + rd * t;
+			float altitude = length(sample_point) - planet_radius;
+			float density = exp(-altitude / scale_height) * step_size;
+
+			// Planet self-shadow: check if sun ray from this point hits the planet
+			vec2 shadow_hit = ray_sphere(sample_point, light_dir, planet_radius);
+			float shadow = (shadow_hit.x > 0.0) ? 0.0 : 1.0;
+
+			// Cloud shadow (optional)
+			if (cloud_shadows_enabled && shadow > 0.0 && cloud_coverage > 0.0) {
+				vec2 cloud_hit = ray_sphere(sample_point, light_dir, cloud_shell_radius);
+				if (cloud_hit.x > 0.0) {
+					vec3 cloud_point = sample_point + light_dir * cloud_hit.x;
+					vec3 cloud_uv = normalize(cloud_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
+					float cn = texture(cloud_noise, cloud_uv).r;
+					float cloud_threshold = 1.0 - cloud_coverage;
+					float cloud_shadow = smoothstep(cloud_threshold - 0.05, cloud_threshold + 0.05, cn);
+					shadow *= (1.0 - cloud_shadow * 0.7);
+				}
+			}
+
+			// Accumulate
+			optical_depth += density;
+
+			float rayleigh = rayleigh_phase(cos_theta) * rayleigh_strength;
+			float mie = mie_phase(cos_theta, 0.76) * mie_strength;
+			scattered += density * shadow * (atmosphere_color * rayleigh + vec3(mie));
+		}
 	}
 
 	ALBEDO = scattered;

@@ -15,20 +15,27 @@ const ATMOSPHERE_SHADER = preload("res://resources/shaders/planet_atmosphere.gds
 
 
 func _setup_visuals() -> void:
+	print("[Planet] _setup_visuals called. body_data=%s visual_data=%s" % [body_data, visual_data])
 	if not body_data or not visual_data:
+		print("[Planet] SKIPPING — missing data")
 		return
 
 	var r := body_data.radius
+	print("[Planet] radius=%s seed=%s" % [r, visual_data.seed])
 
 	# Collision
 	var collision := $CollisionShape3D as CollisionShape3D
 	var sphere_shape := collision.shape as SphereShape3D
 	sphere_shape.radius = r
 
-	# Noise textures
+	# Noise textures — await generation before using
 	var terrain_tex := _create_noise_texture(visual_data.seed, visual_data.noise_scale)
 	var biome_tex := _create_noise_texture(visual_data.seed + 1000, visual_data.noise_scale * 2.0)
 	var cloud_tex := _create_noise_texture(visual_data.seed + 2000, visual_data.noise_scale * 1.5)
+	await terrain_tex.changed
+	await biome_tex.changed
+	await cloud_tex.changed
+	print("[Planet] Noise textures ready")
 
 	# Surface
 	_surface_material = _create_surface_material(terrain_tex, biome_tex, r)
@@ -69,6 +76,11 @@ func _setup_visuals() -> void:
 
 	# Cache sun light reference
 	_sun_light = _find_directional_light(get_tree().root)
+	print("[Planet] Setup done. surface_mat=%s clouds_vis=%s atmo_vis=%s" % [
+		_surface_material != null,
+		($Clouds as MeshInstance3D).visible,
+		($Atmosphere as MeshInstance3D).visible,
+	])
 
 
 func _process(delta: float) -> void:
@@ -100,9 +112,9 @@ func _create_noise_texture(noise_seed: int, frequency: float) -> NoiseTexture3D:
 
 	var tex := NoiseTexture3D.new()
 	tex.noise = noise
-	tex.width = 128
-	tex.height = 128
-	tex.depth = 128
+	tex.width = 64
+	tex.height = 64
+	tex.depth = 64
 	return tex
 
 
