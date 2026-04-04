@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_mix, unshaded, cull_front, depth_draw_never;
+render_mode blend_mix, unshaded, cull_back, depth_draw_never;
 
 uniform float planet_radius = 1.0;
 uniform float atmosphere_radius = 1.15;
