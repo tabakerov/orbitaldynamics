@@ -14,7 +14,8 @@ uniform vec3 sun_direction = vec3(0.0, -1.0, 0.0);
 
 // Clouds
 uniform sampler3D cloud_noise;
-uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.0;
+uniform float cloud_coverage_lower : hint_range(0.0, 1.0) = 0.4;
+uniform float cloud_coverage_upper : hint_range(0.0, 1.0) = 0.2;
 uniform float cloud_noise_scale = 2.0;
 uniform float cloud_lower_radius = 1.003;
 uniform float cloud_upper_radius = 1.02;
@@ -224,15 +225,19 @@ void fragment() {
 
 			// Cloud density
 			float cloud_dens = 0.0;
-			if (cloud_coverage > 0.0) {
+			if (cloud_coverage_lower > 0.0 || cloud_coverage_upper > 0.0) {
 				float sample_r = length(sample_point);
 				if (sample_r >= cloud_lower_radius && sample_r <= cloud_upper_radius) {
 					float cloud_band = cloud_upper_radius - cloud_lower_radius;
 					float band_pos = (sample_r - cloud_lower_radius) / max(cloud_band, 0.001);
-					float edge_fade = smoothstep(0.0, 0.2, band_pos) * smoothstep(1.0, 0.8, band_pos);
-					vec3 cloud_uv = normalize(sample_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
-					float cn = texture(cloud_noise, cloud_uv).r;
-					cloud_dens = smoothstep(1.0 - cloud_coverage - 0.05, 1.0 - cloud_coverage + 0.05, cn) * edge_fade;
+					float edge_fade = smoothstep(0.0, 0.15, band_pos) * smoothstep(1.0, 0.85, band_pos);
+					// Interpolate coverage between lower and upper
+					float coverage = mix(cloud_coverage_lower, cloud_coverage_upper, band_pos);
+					if (coverage > 0.0) {
+						vec3 cloud_uv = normalize(sample_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
+						float cn = texture(cloud_noise, cloud_uv).r;
+						cloud_dens = smoothstep(1.0 - coverage - 0.05, 1.0 - coverage + 0.05, cn) * edge_fade;
+					}
 				}
 			}
 

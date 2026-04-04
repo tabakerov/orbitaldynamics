@@ -97,7 +97,8 @@ func _update_shader_params() -> void:
 	m.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
 
 	# Clouds
-	m.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
+	m.set_shader_parameter("cloud_coverage_lower", visual_data.cloud_coverage_lower)
+	m.set_shader_parameter("cloud_coverage_upper", visual_data.cloud_coverage_upper)
 	m.set_shader_parameter("cloud_color", visual_data.cloud_color)
 	m.set_shader_parameter("cloud_noise_scale", visual_data.noise_scale)
 	m.set_shader_parameter("cloud_lower_radius", r * visual_data.cloud_lower)

@@ -54,8 +54,11 @@ extends Resource
 
 ## --- Clouds ---
 
-## Cloud density. 0 = clear sky.
-@export_range(0.0, 1.0) var cloud_coverage: float = 0.4
+## Cloud coverage at the lower altitude. 0 = clear.
+@export_range(0.0, 1.0) var cloud_coverage_lower: float = 0.4
+
+## Cloud coverage at the upper altitude. 0 = clear.
+@export_range(0.0, 1.0) var cloud_coverage_upper: float = 0.2
 
 ## Cloud color.
 @export var cloud_color: Color = Color(1.0, 1.0, 1.0)

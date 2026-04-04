@@ -1,32 +1,34 @@
-[gd_resource type="Resource" script_class="PlanetVisualData" format=3]
+[gd_resource type="Resource" script_class="PlanetVisualData" format=3 uid="uid://doslh2v18nmv3"]
 
-[ext_resource type="Script" path="res://scripts/planet_visual_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://ciu2hocv80udh" path="res://scripts/planet_visual_data.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-sea_level = 0.15
+sea_level = 0.128
 water_color_shallow = Color(0.2, 0.4, 0.5, 1)
 water_color_deep = Color(0.05, 0.15, 0.25, 1)
 wave_intensity = 0.1
 wave_speed = 0.3
 biome_vegetation = 0.05
-biome_sand = 0.8
+biome_sand = 0.731
 biome_rock = 0.15
 color_vegetation = Color(0.35, 0.45, 0.1, 1)
 color_sand = Color(0.9, 0.7, 0.35, 1)
 color_rock = Color(0.55, 0.45, 0.35, 1)
-mountain_intensity = 0.5
-snow_level = 0.95
-snow_color = Color(0.95, 0.95, 0.98, 1)
-cloud_coverage = 0.1
+mountain_intensity = 0.916
+snow_level = 0.64
+cloud_coverage_lower = 0.0
+cloud_coverage_upper = 0.0
 cloud_color = Color(1, 0.95, 0.85, 1)
 cloud_rotation_speed = 0.03
-atmosphere_density = 0.3
+atmosphere_density = 1.0
 atmosphere_color = Color(0.8, 0.55, 0.3, 1)
-atmosphere_radius = 1.08
-atmosphere_rayleigh_strength = 0.5
+atmosphere_radius = 1.5
+atmosphere_rayleigh_strength = 0.181
 atmosphere_mie_strength = 0.5
-atmosphere_steps = 8
-cloud_shadows_enabled = false
+atmosphere_falloff = 0.111
+atmosphere_steps = 36
+cloud_shadows_enabled = true
+ao_strength = 1.0
 seed = 137
-noise_scale = 2.5
+noise_scale = 0.8200000000000001
