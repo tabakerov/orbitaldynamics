@@ -30,6 +30,7 @@ script = ExtResource("1")
 shape = SubResource("collision")
 
 [node name="Surface" type="MeshInstance3D" parent="."]
+visible = false
 mesh = SubResource("surface_mesh")
 
 [node name="Clouds" type="MeshInstance3D" parent="."]
