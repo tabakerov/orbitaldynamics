@@ -110,6 +110,7 @@ func _update_shader_params() -> void:
 		_surface_material.set_shader_parameter("color_sand", visual_data.color_sand)
 		_surface_material.set_shader_parameter("color_rock", visual_data.color_rock)
 		_surface_material.set_shader_parameter("mountain_intensity", visual_data.mountain_intensity)
+		_surface_material.set_shader_parameter("mountain_noise_scale", visual_data.mountain_noise_scale)
 		_surface_material.set_shader_parameter("max_displacement", r * 0.15)
 		_surface_material.set_shader_parameter("snow_level", visual_data.snow_level)
 		_surface_material.set_shader_parameter("snow_color", visual_data.snow_color)

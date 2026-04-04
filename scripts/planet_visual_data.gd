@@ -43,6 +43,9 @@ extends Resource
 ## Vertex displacement magnitude. 0 = flat, 1 = maximum height.
 @export_range(0.0, 1.0) var mountain_intensity: float = 0.3
 
+## Noise scale for mountain detail (independent of terrain noise_scale).
+@export_range(0.5, 16.0) var mountain_noise_scale: float = 4.0
+
 ## Height threshold for snow caps. 0 = no snow.
 @export_range(0.0, 1.0) var snow_level: float = 0.7
 
@@ -87,7 +90,7 @@ extends Resource
 @export_range(0.05, 1.0) var atmosphere_falloff: float = 0.35
 
 ## Ray-march step count (quality vs performance).
-@export_range(4, 16) var atmosphere_steps: int = 8
+@export_range(4, 128) var atmosphere_steps: int = 8
 
 ## Enable cloud shadow sampling in atmosphere ray-march.
 @export var cloud_shadows_enabled: bool = false

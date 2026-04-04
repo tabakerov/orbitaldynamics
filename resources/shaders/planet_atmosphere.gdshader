@@ -8,7 +8,7 @@ uniform vec3 atmosphere_color : source_color = vec3(0.3, 0.5, 1.0);
 uniform float rayleigh_strength : hint_range(0.0, 5.0) = 1.0;
 uniform float mie_strength : hint_range(0.0, 2.0) = 0.3;
 uniform float atmosphere_falloff : hint_range(0.05, 1.0) = 0.35;
-uniform int atmosphere_steps : hint_range(4, 16) = 8;
+uniform int atmosphere_steps : hint_range(4, 128) = 8;
 uniform vec3 sun_direction = vec3(0.0, -1.0, 0.0);
 
 // Volumetric clouds (integrated into ray-march)

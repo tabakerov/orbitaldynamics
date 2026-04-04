@@ -20,6 +20,7 @@ uniform vec3 color_rock : source_color = vec3(0.45, 0.42, 0.4);
 
 // Mountains & Snow
 uniform float mountain_intensity : hint_range(0.0, 1.0) = 0.3;
+uniform float mountain_noise_scale : hint_range(0.5, 16.0) = 4.0;
 uniform float max_displacement = 0.5;
 uniform float snow_level : hint_range(0.0, 1.0) = 0.7;
 uniform vec3 snow_color : source_color = vec3(0.95, 0.95, 0.98);
@@ -41,8 +42,12 @@ void vertex() {
 
 	if (n > sea_level) {
 		float land_height = (n - sea_level) / (1.0 - sea_level);
-		VERTEX += NORMAL * land_height * mountain_intensity * max_displacement;
-		v_height = land_height;
+		// Mountain detail from higher-frequency noise
+		vec3 mtn_sample = unit_pos * mountain_noise_scale * 0.5 + 0.5;
+		float mtn_detail = texture(terrain_noise, mtn_sample).r;
+		float displacement = land_height * (0.6 + 0.4 * mtn_detail);
+		VERTEX += NORMAL * displacement * mountain_intensity * max_displacement;
+		v_height = displacement;
 	} else {
 		v_height = 0.0;
 	}
