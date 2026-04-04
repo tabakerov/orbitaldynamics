@@ -24,11 +24,15 @@ uniform float max_displacement = 0.5;
 uniform float snow_level : hint_range(0.0, 1.0) = 0.7;
 uniform vec3 snow_color : source_color = vec3(0.95, 0.95, 0.98);
 
+// Ambient Occlusion
+uniform float ao_strength : hint_range(0.0, 1.0) = 0.4;
+
 // Noise sampling
 uniform float noise_scale = 2.0;
 
 varying float v_height;
 varying float v_noise;
+varying float v_ao;
 varying vec3 v_model_pos;
 
 void vertex() {
@@ -36,6 +40,13 @@ void vertex() {
 	v_model_pos = unit_pos;
 	vec3 sample_pos = unit_pos * noise_scale * 0.5 + 0.5;
 	float n = texture(terrain_noise, sample_pos).r;
+
+	// Sample at broader scale for AO reference height
+	float n_broad = texture(terrain_noise, unit_pos * noise_scale * 0.25 + 0.5).r;
+	// Local height relative to broad surroundings — negative = valley
+	float height_diff = n - n_broad;
+	// Crevice/valley occlusion: darker where local height is below average
+	v_ao = clamp(0.5 + height_diff * 2.0, 0.0, 1.0);
 
 	v_noise = n;
 
@@ -97,5 +108,15 @@ void fragment() {
 		SPECULAR = 0.1;
 	}
 
-	ALBEDO = col;
+	// Ambient occlusion — valleys and crevices get darker
+	float ao = mix(1.0, v_ao, ao_strength);
+	// Also darken areas near sea level (coastal lowlands)
+	if (v_noise > sea_level) {
+		float coastal_ao = smoothstep(0.0, 0.15, v_height);
+		ao *= mix(1.0 - ao_strength * 0.5, 1.0, coastal_ao);
+	}
+
+	ALBEDO = col * ao;
+	AO = ao;
+	AO_LIGHT_AFFECT = ao_strength;
 }

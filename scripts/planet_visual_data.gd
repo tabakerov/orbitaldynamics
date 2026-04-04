@@ -86,6 +86,11 @@ extends Resource
 ## Enable cloud shadow sampling in atmosphere ray-march.
 @export var cloud_shadows_enabled: bool = false
 
+## --- Ambient Occlusion ---
+
+## Strength of height-based ambient occlusion. 0 = off.
+@export_range(0.0, 1.0) var ao_strength: float = 0.4
+
 ## --- Generation ---
 
 ## Seed for procedural generation. Different seeds = different continents.
