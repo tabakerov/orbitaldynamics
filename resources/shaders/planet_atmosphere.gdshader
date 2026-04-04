@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode blend_add, unshaded, cull_front;
+render_mode blend_mix, unshaded, cull_back, depth_draw_never;
 
 uniform float planet_radius = 1.0;
 uniform float atmosphere_radius = 1.15;
@@ -18,7 +18,6 @@ uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.0;
 uniform float cloud_noise_scale = 2.0;
 uniform float cloud_shell_radius = 1.005;
 
-// Ray-sphere intersection. Returns (near, far) distances or (-1, -1) if no hit.
 vec2 ray_sphere(vec3 ro, vec3 rd, float radius) {
 	float b = dot(ro, rd);
 	float c = dot(ro, ro) - radius * radius;
@@ -30,12 +29,10 @@ vec2 ray_sphere(vec3 ro, vec3 rd, float radius) {
 	return vec2(-b - sq, -b + sq);
 }
 
-// Rayleigh phase function
 float rayleigh_phase(float cos_theta) {
 	return 0.75 * (1.0 + cos_theta * cos_theta);
 }
 
-// Henyey-Greenstein phase function for Mie scattering
 float mie_phase(float cos_theta, float g) {
 	float g2 = g * g;
 	float denom = 1.0 + g2 - 2.0 * g * cos_theta;
@@ -43,42 +40,41 @@ float mie_phase(float cos_theta, float g) {
 }
 
 void fragment() {
-	// Ray origin and direction in model space
+	// Ray in model space (sphere centered at origin)
 	vec3 ro = (inverse(MODEL_MATRIX) * vec4(CAMERA_POSITION_WORLD, 1.0)).xyz;
-	vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	vec3 rd = normalize((inverse(MODEL_MATRIX) * vec4(normalize(world_pos - CAMERA_POSITION_WORLD), 0.0)).xyz);
+	vec3 frag_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec3 rd = normalize((inverse(MODEL_MATRIX) * vec4(normalize(frag_world - CAMERA_POSITION_WORLD), 0.0)).xyz);
 
-	// Atmosphere shell intersection
+	// Find full atmosphere intersection
 	vec2 atmo_hit = ray_sphere(ro, rd, atmosphere_radius);
 
 	vec3 scattered = vec3(0.0);
 	float optical_depth = 0.0;
 
-	if (atmo_hit.x >= 0.0 || atmo_hit.y >= 0.0) {
+	if (atmo_hit.y > 0.0) {
 		float ray_start = max(atmo_hit.x, 0.0);
 		float ray_end = atmo_hit.y;
 
-		// Planet body intersection — ray ends at planet surface
+		// Planet body occlusion
 		vec2 planet_hit = ray_sphere(ro, rd, planet_radius);
 		if (planet_hit.x > 0.0) {
 			ray_end = min(ray_end, planet_hit.x);
 		}
 
-		// Light direction in model space
 		vec3 light_dir = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
 		float cos_theta = dot(rd, light_dir);
 
 		float step_size = (ray_end - ray_start) / float(atmosphere_steps);
-
-		float scale_height = (atmosphere_radius - planet_radius) * 0.4;
+		float scale_height = (atmosphere_radius - planet_radius) * 0.35;
 
 		for (int i = 0; i < atmosphere_steps; i++) {
 			float t = ray_start + (float(i) + 0.5) * step_size;
 			vec3 sample_point = ro + rd * t;
 			float altitude = length(sample_point) - planet_radius;
+			float normalized_alt = altitude / (atmosphere_radius - planet_radius);
 			float density = exp(-altitude / scale_height) * step_size;
 
-			// Planet self-shadow: check if sun ray from this point hits the planet
+			// Planet self-shadow
 			vec2 shadow_hit = ray_sphere(sample_point, light_dir, planet_radius);
 			float shadow = (shadow_hit.x > 0.0) ? 0.0 : 1.0;
 
@@ -95,15 +91,14 @@ void fragment() {
 				}
 			}
 
-			// Accumulate
 			optical_depth += density;
-
 			float rayleigh = rayleigh_phase(cos_theta) * rayleigh_strength;
 			float mie = mie_phase(cos_theta, 0.76) * mie_strength;
 			scattered += density * shadow * (atmosphere_color * rayleigh + vec3(mie));
 		}
 	}
 
-	ALBEDO = scattered;
-	ALPHA = clamp(optical_depth * atmosphere_density, 0.0, 1.0);
+	float alpha = 1.0 - exp(-optical_depth * atmosphere_density * 4.0);
+	ALBEDO = scattered / max(optical_depth * atmosphere_density, 0.001);
+	ALPHA = alpha;
 }

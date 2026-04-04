@@ -57,6 +57,9 @@ extends Resource
 ## Cloud color.
 @export var cloud_color: Color = Color(1.0, 1.0, 1.0)
 
+## Cloud layer height above surface (multiplier of planet radius).
+@export_range(1.001, 1.05) var cloud_height: float = 1.005
+
 ## Independent rotation speed for cloud layer (rad/s).
 @export_range(0.0, 1.0) var cloud_rotation_speed: float = 0.05
 

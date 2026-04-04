@@ -2,20 +2,13 @@
 class_name Planet
 extends CelestialBody
 
-@export var visual_data: PlanetVisualData:
-	set(value):
-		if visual_data and visual_data.changed.is_connected(_on_visual_data_changed):
-			visual_data.changed.disconnect(_on_visual_data_changed)
-		visual_data = value
-		if visual_data:
-			visual_data.changed.connect(_on_visual_data_changed)
-			if is_inside_tree():
-				_on_visual_data_changed()
+@export var visual_data: PlanetVisualData
 
 var _clouds_mesh: MeshInstance3D
 var _surface_material: ShaderMaterial
 var _clouds_material: ShaderMaterial
 var _atmosphere_material: ShaderMaterial
+var _atmosphere_mesh: MeshInstance3D
 var _sun_light: DirectionalLight3D
 var _cached_seed: int = -1
 var _cached_noise_scale: float = -1.0
@@ -65,37 +58,46 @@ func _setup_visuals() -> void:
 	_clouds_material.set_shader_parameter("cloud_noise", cloud_tex)
 	_clouds_mesh = $Clouds as MeshInstance3D
 	var clouds_mesh_res := _clouds_mesh.mesh.duplicate() as SphereMesh
-	var cloud_r := r * 1.005
-	clouds_mesh_res.radius = cloud_r
-	clouds_mesh_res.height = cloud_r * 2.0
 	_clouds_mesh.mesh = clouds_mesh_res
 	_clouds_mesh.material_override = _clouds_material
 
 	# Atmosphere
 	_atmosphere_material = ShaderMaterial.new()
 	_atmosphere_material.shader = ATMOSPHERE_SHADER
-	_atmosphere_material.set_shader_parameter("planet_radius", r)
 	_atmosphere_material.set_shader_parameter("cloud_noise", cloud_tex)
-	var atmo := $Atmosphere as MeshInstance3D
-	var atmo_mesh := atmo.mesh.duplicate() as SphereMesh
-	atmo.mesh = atmo_mesh
-	atmo.material_override = _atmosphere_material
+	_atmosphere_mesh = $Atmosphere as MeshInstance3D
+	var atmo_mesh := _atmosphere_mesh.mesh.duplicate() as SphereMesh
+	_atmosphere_mesh.mesh = atmo_mesh
+	_atmosphere_mesh.material_override = _atmosphere_material
 
 	# Cache sun light reference
 	_sun_light = _find_directional_light(get_tree().root)
 
-	# Apply all visual parameters
+	# Push all params
 	_update_shader_params()
 
 
-func _on_visual_data_changed() -> void:
-	if not _surface_material:
+func _process(delta: float) -> void:
+	if not visual_data or not body_data:
 		return
-	# Seed or noise_scale changed — need full rebuild
+
+	# Rebuild if seed/noise_scale changed
 	if visual_data.seed != _cached_seed or visual_data.noise_scale != _cached_noise_scale:
-		_setup_visuals()
+		if _surface_material:
+			_setup_visuals()
 		return
+
+	# Reactive: push current visual_data to shaders every frame
 	_update_shader_params()
+
+	# Cloud rotation
+	if _clouds_mesh and visual_data.cloud_coverage > 0.0:
+		_clouds_mesh.rotate_y(visual_data.cloud_rotation_speed * delta)
+
+	# Sun direction
+	if _atmosphere_material:
+		var sun_dir := -_sun_light.global_transform.basis.z if _sun_light else Vector3(0.0, -1.0, 0.0)
+		_atmosphere_material.set_shader_parameter("sun_direction", sun_dir)
 
 
 func _update_shader_params() -> void:
@@ -103,7 +105,7 @@ func _update_shader_params() -> void:
 		return
 	var r := body_data.radius
 
-	# Surface uniforms
+	# Surface
 	if _surface_material:
 		_surface_material.set_shader_parameter("sea_level", visual_data.sea_level)
 		_surface_material.set_shader_parameter("water_color_shallow", visual_data.water_color_shallow)
@@ -122,17 +124,23 @@ func _update_shader_params() -> void:
 		_surface_material.set_shader_parameter("snow_color", visual_data.snow_color)
 		_surface_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
 
-	# Cloud uniforms + visibility
+	# Clouds
 	if _clouds_material:
 		_clouds_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
 		_clouds_material.set_shader_parameter("cloud_color", visual_data.cloud_color)
 		_clouds_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
 	if _clouds_mesh:
 		_clouds_mesh.visible = visual_data.cloud_coverage > 0.0
+		var cloud_r := r * visual_data.cloud_height
+		var cmesh := _clouds_mesh.mesh as SphereMesh
+		if cmesh and not is_equal_approx(cmesh.radius, cloud_r):
+			cmesh.radius = cloud_r
+			cmesh.height = cloud_r * 2.0
 
-	# Atmosphere uniforms + visibility
+	# Atmosphere
 	if _atmosphere_material:
 		var atmo_r := r * visual_data.atmosphere_radius
+		_atmosphere_material.set_shader_parameter("planet_radius", r)
 		_atmosphere_material.set_shader_parameter("atmosphere_radius", atmo_r)
 		_atmosphere_material.set_shader_parameter("atmosphere_density", visual_data.atmosphere_density)
 		_atmosphere_material.set_shader_parameter("atmosphere_color", visual_data.atmosphere_color)
@@ -141,23 +149,15 @@ func _update_shader_params() -> void:
 		_atmosphere_material.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
 		_atmosphere_material.set_shader_parameter("cloud_shadows_enabled", visual_data.cloud_shadows_enabled)
 		_atmosphere_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
-		_atmosphere_material.set_shader_parameter("cloud_shell_radius", r * 1.005)
-		# Resize atmosphere mesh
-		var atmo := $Atmosphere as MeshInstance3D
-		var atmo_mesh := atmo.mesh as SphereMesh
-		if atmo_mesh:
-			atmo_mesh.radius = atmo_r
-			atmo_mesh.height = atmo_r * 2.0
-		atmo.visible = visual_data.atmosphere_density > 0.0
-
-
-func _process(delta: float) -> void:
-	if _clouds_mesh and visual_data and visual_data.cloud_coverage > 0.0:
-		_clouds_mesh.rotate_y(visual_data.cloud_rotation_speed * delta)
-
-	if _atmosphere_material:
-		var sun_dir := -_sun_light.global_transform.basis.z if _sun_light else Vector3(0.0, -1.0, 0.0)
-		_atmosphere_material.set_shader_parameter("sun_direction", sun_dir)
+		_atmosphere_material.set_shader_parameter("cloud_noise_scale", visual_data.noise_scale)
+		_atmosphere_material.set_shader_parameter("cloud_shell_radius", r * visual_data.cloud_height)
+	if _atmosphere_mesh:
+		_atmosphere_mesh.visible = visual_data.atmosphere_density > 0.0
+		var atmo_r := r * visual_data.atmosphere_radius
+		var amesh := _atmosphere_mesh.mesh as SphereMesh
+		if amesh and not is_equal_approx(amesh.radius, atmo_r):
+			amesh.radius = atmo_r
+			amesh.height = atmo_r * 2.0
 
 
 func _find_directional_light(node: Node) -> DirectionalLight3D:
