@@ -2,13 +2,23 @@
 class_name Planet
 extends CelestialBody
 
-@export var visual_data: PlanetVisualData
+@export var visual_data: PlanetVisualData:
+	set(value):
+		if visual_data and visual_data.changed.is_connected(_on_visual_data_changed):
+			visual_data.changed.disconnect(_on_visual_data_changed)
+		visual_data = value
+		if visual_data:
+			visual_data.changed.connect(_on_visual_data_changed)
+			if is_inside_tree():
+				_on_visual_data_changed()
 
 var _clouds_mesh: MeshInstance3D
 var _surface_material: ShaderMaterial
 var _clouds_material: ShaderMaterial
 var _atmosphere_material: ShaderMaterial
 var _sun_light: DirectionalLight3D
+var _cached_seed: int = -1
+var _cached_noise_scale: float = -1.0
 
 const SURFACE_SHADER = preload("res://resources/shaders/planet_surface.gdshader")
 const CLOUDS_SHADER = preload("res://resources/shaders/planet_clouds.gdshader")
@@ -16,13 +26,10 @@ const ATMOSPHERE_SHADER = preload("res://resources/shaders/planet_atmosphere.gds
 
 
 func _setup_visuals() -> void:
-	print("[Planet] _setup_visuals called. body_data=%s visual_data=%s" % [body_data, visual_data])
 	if not body_data or not visual_data:
-		print("[Planet] SKIPPING — missing data")
 		return
 
 	var r := body_data.radius
-	print("[Planet] radius=%s seed=%s" % [r, visual_data.seed])
 
 	# Collision
 	var collision := $CollisionShape3D as CollisionShape3D
@@ -36,10 +43,15 @@ func _setup_visuals() -> void:
 	await terrain_tex.changed
 	await biome_tex.changed
 	await cloud_tex.changed
-	print("[Planet] Noise textures ready")
+
+	_cached_seed = visual_data.seed
+	_cached_noise_scale = visual_data.noise_scale
 
 	# Surface
-	_surface_material = _create_surface_material(terrain_tex, biome_tex, r)
+	_surface_material = ShaderMaterial.new()
+	_surface_material.shader = SURFACE_SHADER
+	_surface_material.set_shader_parameter("terrain_noise", terrain_tex)
+	_surface_material.set_shader_parameter("biome_noise", biome_tex)
 	var surface := $Surface as MeshInstance3D
 	var surface_mesh := surface.mesh.duplicate() as SphereMesh
 	surface_mesh.radius = r
@@ -48,40 +60,95 @@ func _setup_visuals() -> void:
 	surface.material_override = _surface_material
 
 	# Clouds
-	if visual_data.cloud_coverage > 0.0:
-		_clouds_material = _create_clouds_material(cloud_tex)
-		_clouds_mesh = $Clouds as MeshInstance3D
-		var clouds_mesh_res := _clouds_mesh.mesh.duplicate() as SphereMesh
-		var cloud_r := r * 1.005
-		clouds_mesh_res.radius = cloud_r
-		clouds_mesh_res.height = cloud_r * 2.0
-		_clouds_mesh.mesh = clouds_mesh_res
-		_clouds_mesh.material_override = _clouds_material
-		_clouds_mesh.visible = true
-	else:
-		($Clouds as MeshInstance3D).visible = false
+	_clouds_material = ShaderMaterial.new()
+	_clouds_material.shader = CLOUDS_SHADER
+	_clouds_material.set_shader_parameter("cloud_noise", cloud_tex)
+	_clouds_mesh = $Clouds as MeshInstance3D
+	var clouds_mesh_res := _clouds_mesh.mesh.duplicate() as SphereMesh
+	var cloud_r := r * 1.005
+	clouds_mesh_res.radius = cloud_r
+	clouds_mesh_res.height = cloud_r * 2.0
+	_clouds_mesh.mesh = clouds_mesh_res
+	_clouds_mesh.material_override = _clouds_material
 
 	# Atmosphere
-	if visual_data.atmosphere_density > 0.0:
-		_atmosphere_material = _create_atmosphere_material(cloud_tex, r)
-		var atmo := $Atmosphere as MeshInstance3D
-		var atmo_mesh := atmo.mesh.duplicate() as SphereMesh
-		var atmo_r := r * visual_data.atmosphere_radius
-		atmo_mesh.radius = atmo_r
-		atmo_mesh.height = atmo_r * 2.0
-		atmo.mesh = atmo_mesh
-		atmo.material_override = _atmosphere_material
-		atmo.visible = true
-	else:
-		($Atmosphere as MeshInstance3D).visible = false
+	_atmosphere_material = ShaderMaterial.new()
+	_atmosphere_material.shader = ATMOSPHERE_SHADER
+	_atmosphere_material.set_shader_parameter("planet_radius", r)
+	_atmosphere_material.set_shader_parameter("cloud_noise", cloud_tex)
+	var atmo := $Atmosphere as MeshInstance3D
+	var atmo_mesh := atmo.mesh.duplicate() as SphereMesh
+	atmo.mesh = atmo_mesh
+	atmo.material_override = _atmosphere_material
 
 	# Cache sun light reference
 	_sun_light = _find_directional_light(get_tree().root)
-	print("[Planet] Setup done. surface_mat=%s clouds_vis=%s atmo_vis=%s" % [
-		_surface_material != null,
-		($Clouds as MeshInstance3D).visible,
-		($Atmosphere as MeshInstance3D).visible,
-	])
+
+	# Apply all visual parameters
+	_update_shader_params()
+
+
+func _on_visual_data_changed() -> void:
+	if not _surface_material:
+		return
+	# Seed or noise_scale changed — need full rebuild
+	if visual_data.seed != _cached_seed or visual_data.noise_scale != _cached_noise_scale:
+		_setup_visuals()
+		return
+	_update_shader_params()
+
+
+func _update_shader_params() -> void:
+	if not visual_data or not body_data:
+		return
+	var r := body_data.radius
+
+	# Surface uniforms
+	if _surface_material:
+		_surface_material.set_shader_parameter("sea_level", visual_data.sea_level)
+		_surface_material.set_shader_parameter("water_color_shallow", visual_data.water_color_shallow)
+		_surface_material.set_shader_parameter("water_color_deep", visual_data.water_color_deep)
+		_surface_material.set_shader_parameter("wave_intensity", visual_data.wave_intensity)
+		_surface_material.set_shader_parameter("wave_speed", visual_data.wave_speed)
+		_surface_material.set_shader_parameter("biome_vegetation", visual_data.biome_vegetation)
+		_surface_material.set_shader_parameter("biome_sand", visual_data.biome_sand)
+		_surface_material.set_shader_parameter("biome_rock", visual_data.biome_rock)
+		_surface_material.set_shader_parameter("color_vegetation", visual_data.color_vegetation)
+		_surface_material.set_shader_parameter("color_sand", visual_data.color_sand)
+		_surface_material.set_shader_parameter("color_rock", visual_data.color_rock)
+		_surface_material.set_shader_parameter("mountain_intensity", visual_data.mountain_intensity)
+		_surface_material.set_shader_parameter("max_displacement", r * 0.15)
+		_surface_material.set_shader_parameter("snow_level", visual_data.snow_level)
+		_surface_material.set_shader_parameter("snow_color", visual_data.snow_color)
+		_surface_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
+
+	# Cloud uniforms + visibility
+	if _clouds_material:
+		_clouds_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
+		_clouds_material.set_shader_parameter("cloud_color", visual_data.cloud_color)
+		_clouds_material.set_shader_parameter("noise_scale", visual_data.noise_scale)
+	if _clouds_mesh:
+		_clouds_mesh.visible = visual_data.cloud_coverage > 0.0
+
+	# Atmosphere uniforms + visibility
+	if _atmosphere_material:
+		var atmo_r := r * visual_data.atmosphere_radius
+		_atmosphere_material.set_shader_parameter("atmosphere_radius", atmo_r)
+		_atmosphere_material.set_shader_parameter("atmosphere_density", visual_data.atmosphere_density)
+		_atmosphere_material.set_shader_parameter("atmosphere_color", visual_data.atmosphere_color)
+		_atmosphere_material.set_shader_parameter("rayleigh_strength", visual_data.atmosphere_rayleigh_strength)
+		_atmosphere_material.set_shader_parameter("mie_strength", visual_data.atmosphere_mie_strength)
+		_atmosphere_material.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
+		_atmosphere_material.set_shader_parameter("cloud_shadows_enabled", visual_data.cloud_shadows_enabled)
+		_atmosphere_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
+		_atmosphere_material.set_shader_parameter("cloud_shell_radius", r * 1.005)
+		# Resize atmosphere mesh
+		var atmo := $Atmosphere as MeshInstance3D
+		var atmo_mesh := atmo.mesh as SphereMesh
+		if atmo_mesh:
+			atmo_mesh.radius = atmo_r
+			atmo_mesh.height = atmo_r * 2.0
+		atmo.visible = visual_data.atmosphere_density > 0.0
 
 
 func _process(delta: float) -> void:
@@ -117,55 +184,3 @@ func _create_noise_texture(noise_seed: int, frequency: float) -> NoiseTexture3D:
 	tex.height = 64
 	tex.depth = 64
 	return tex
-
-
-func _create_surface_material(terrain_tex: NoiseTexture3D, biome_tex: NoiseTexture3D, r: float) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = SURFACE_SHADER
-	mat.set_shader_parameter("terrain_noise", terrain_tex)
-	mat.set_shader_parameter("biome_noise", biome_tex)
-	mat.set_shader_parameter("sea_level", visual_data.sea_level)
-	mat.set_shader_parameter("water_color_shallow", visual_data.water_color_shallow)
-	mat.set_shader_parameter("water_color_deep", visual_data.water_color_deep)
-	mat.set_shader_parameter("wave_intensity", visual_data.wave_intensity)
-	mat.set_shader_parameter("wave_speed", visual_data.wave_speed)
-	mat.set_shader_parameter("biome_vegetation", visual_data.biome_vegetation)
-	mat.set_shader_parameter("biome_sand", visual_data.biome_sand)
-	mat.set_shader_parameter("biome_rock", visual_data.biome_rock)
-	mat.set_shader_parameter("color_vegetation", visual_data.color_vegetation)
-	mat.set_shader_parameter("color_sand", visual_data.color_sand)
-	mat.set_shader_parameter("color_rock", visual_data.color_rock)
-	mat.set_shader_parameter("mountain_intensity", visual_data.mountain_intensity)
-	mat.set_shader_parameter("max_displacement", r * 0.15)
-	mat.set_shader_parameter("snow_level", visual_data.snow_level)
-	mat.set_shader_parameter("snow_color", visual_data.snow_color)
-	mat.set_shader_parameter("noise_scale", visual_data.noise_scale)
-	return mat
-
-
-func _create_clouds_material(cloud_tex: NoiseTexture3D) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = CLOUDS_SHADER
-	mat.set_shader_parameter("cloud_noise", cloud_tex)
-	mat.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
-	mat.set_shader_parameter("cloud_color", visual_data.cloud_color)
-	mat.set_shader_parameter("noise_scale", visual_data.noise_scale)
-	return mat
-
-
-func _create_atmosphere_material(cloud_tex: NoiseTexture3D, r: float) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = ATMOSPHERE_SHADER
-	mat.set_shader_parameter("planet_radius", r)
-	mat.set_shader_parameter("atmosphere_radius", r * visual_data.atmosphere_radius)
-	mat.set_shader_parameter("atmosphere_density", visual_data.atmosphere_density)
-	mat.set_shader_parameter("atmosphere_color", visual_data.atmosphere_color)
-	mat.set_shader_parameter("rayleigh_strength", visual_data.atmosphere_rayleigh_strength)
-	mat.set_shader_parameter("mie_strength", visual_data.atmosphere_mie_strength)
-	mat.set_shader_parameter("atmosphere_steps", visual_data.atmosphere_steps)
-	mat.set_shader_parameter("cloud_shadows_enabled", visual_data.cloud_shadows_enabled)
-	mat.set_shader_parameter("cloud_noise", cloud_tex)
-	mat.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
-	mat.set_shader_parameter("cloud_noise_scale", visual_data.noise_scale)
-	mat.set_shader_parameter("cloud_shell_radius", r * 1.005)
-	return mat
