@@ -120,6 +120,7 @@ func _update_shader_params() -> void:
 	m.set_shader_parameter("snow_level", visual_data.snow_level)
 	m.set_shader_parameter("snow_color", visual_data.snow_color)
 	m.set_shader_parameter("noise_scale", visual_data.noise_scale)
+	m.set_shader_parameter("max_displacement", r * 0.15)
 	m.set_shader_parameter("ao_strength", visual_data.ao_strength)
 
 	# Resize atmosphere mesh

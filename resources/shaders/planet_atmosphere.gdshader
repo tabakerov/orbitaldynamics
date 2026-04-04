@@ -39,6 +39,7 @@ uniform float mountain_noise_scale : hint_range(0.5, 16.0) = 4.0;
 uniform float snow_level : hint_range(0.0, 1.0) = 0.7;
 uniform vec3 snow_color : source_color = vec3(0.95, 0.95, 0.98);
 uniform float noise_scale = 2.0;
+uniform float max_displacement = 0.5;
 uniform float ao_strength : hint_range(0.0, 1.0) = 0.4;
 
 varying vec3 v_model_pos;
@@ -60,6 +61,61 @@ float mie_phase(float cos_theta, float g) {
 	float g2 = g * g;
 	float denom = 1.0 + g2 - 2.0 * g * cos_theta;
 	return (1.0 - g2) / (4.0 * PI * pow(denom, 1.5));
+}
+
+// Returns terrain radius at a given direction (planet_radius + displacement)
+float get_terrain_radius(vec3 unit_pos) {
+	float n = texture(terrain_noise, unit_pos * noise_scale * 0.5 + 0.5).r;
+	if (n > sea_level) {
+		float land_height = (n - sea_level) / (1.0 - sea_level);
+		float mtn_detail = texture(terrain_noise, unit_pos * mountain_noise_scale * 0.5 + 0.5).r;
+		return planet_radius + land_height * (0.6 + 0.4 * mtn_detail) * mountain_intensity * max_displacement;
+	}
+	return planet_radius;
+}
+
+// Ray-march against terrain heightfield. Returns hit distance or -1.
+float intersect_terrain(vec3 ro, vec3 rd) {
+	float max_r = planet_radius + mountain_intensity * max_displacement;
+	vec2 outer_hit = ray_sphere(ro, rd, max_r);
+	if (outer_hit.x < 0.0) return -1.0;
+
+	vec2 inner_hit = ray_sphere(ro, rd, planet_radius);
+	float t_start = outer_hit.x;
+	float t_end = inner_hit.x > 0.0 ? inner_hit.x : outer_hit.y;
+
+	// Coarse march (16 steps)
+	float dt = (t_end - t_start) / 16.0;
+	float prev_t = t_start;
+	float prev_diff = 1.0; // positive = above terrain
+	for (int i = 0; i <= 16; i++) {
+		float t = t_start + float(i) * dt;
+		vec3 p = ro + rd * t;
+		float r = length(p);
+		float terrain_r = get_terrain_radius(normalize(p));
+		float diff = r - terrain_r;
+		if (diff < 0.0) {
+			// Crossed terrain — binary search refinement
+			float lo = prev_t;
+			float hi = t;
+			for (int j = 0; j < 6; j++) {
+				float mid = (lo + hi) * 0.5;
+				vec3 mp = ro + rd * mid;
+				if (length(mp) - get_terrain_radius(normalize(mp)) < 0.0) {
+					hi = mid;
+				} else {
+					lo = mid;
+				}
+			}
+			return (lo + hi) * 0.5;
+		}
+		prev_t = t;
+		prev_diff = diff;
+	}
+
+	// Ray hit the inner sphere (sea level)
+	if (inner_hit.x > 0.0) return inner_hit.x;
+	return -1.0;
 }
 
 vec3 compute_surface(vec3 hit_point, vec3 light_dir) {
@@ -141,14 +197,14 @@ void fragment() {
 	vec3 accumulated_light = vec3(0.0);
 	float transmittance = 1.0;
 
-	vec2 planet_hit = ray_sphere(ro, rd, planet_radius);
+	float terrain_t = intersect_terrain(ro, rd);
 
 	if (atmo_hit.y > 0.0) {
 		float ray_start = max(atmo_hit.x, 0.0);
 		float ray_end = atmo_hit.y;
 
-		if (planet_hit.x > 0.0) {
-			ray_end = min(ray_end, planet_hit.x);
+		if (terrain_t > 0.0) {
+			ray_end = min(ray_end, terrain_t);
 		}
 
 		vec3 light_dir = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
@@ -196,9 +252,9 @@ void fragment() {
 			transmittance *= exp(-extinction);
 		}
 
-		// Surface rendering at ray-planet intersection
-		if (planet_hit.x > 0.0 && transmittance > 0.01) {
-			vec3 hit = ro + rd * planet_hit.x;
+		// Surface rendering at ray-terrain intersection
+		if (terrain_t > 0.0 && transmittance > 0.01) {
+			vec3 hit = ro + rd * terrain_t;
 			vec3 light_dir2 = normalize((inverse(MODEL_MATRIX) * vec4(sun_direction, 0.0)).xyz);
 			vec3 surface_col = compute_surface(hit, light_dir2);
 			accumulated_light += surface_col * transmittance;
