@@ -130,8 +130,8 @@ func _update_shader_params() -> void:
 		_atmosphere_material.set_shader_parameter("cloud_coverage", visual_data.cloud_coverage)
 		_atmosphere_material.set_shader_parameter("cloud_color", visual_data.cloud_color)
 		_atmosphere_material.set_shader_parameter("cloud_noise_scale", visual_data.noise_scale)
-		_atmosphere_material.set_shader_parameter("cloud_shell_radius", r * visual_data.cloud_height)
-		_atmosphere_material.set_shader_parameter("cloud_thickness", 0.15)
+		_atmosphere_material.set_shader_parameter("cloud_lower_radius", r * visual_data.cloud_lower)
+		_atmosphere_material.set_shader_parameter("cloud_upper_radius", r * visual_data.cloud_upper)
 	if _atmosphere_mesh:
 		_atmosphere_mesh.visible = visual_data.atmosphere_density > 0.0
 		var atmo_r := r * visual_data.atmosphere_radius

@@ -15,9 +15,9 @@ uniform vec3 sun_direction = vec3(0.0, -1.0, 0.0);
 uniform sampler3D cloud_noise;
 uniform float cloud_coverage : hint_range(0.0, 1.0) = 0.0;
 uniform float cloud_noise_scale = 2.0;
-uniform float cloud_shell_radius = 1.005;
+uniform float cloud_lower_radius = 1.003;
+uniform float cloud_upper_radius = 1.02;
 uniform vec3 cloud_color : source_color = vec3(1.0, 1.0, 1.0);
-uniform float cloud_thickness = 0.02;
 
 varying vec3 v_model_pos;
 
@@ -68,7 +68,6 @@ void fragment() {
 		float cos_theta = dot(rd, light_dir);
 		float step_size = (ray_end - ray_start) / float(atmosphere_steps);
 		float scale_height = (atmosphere_radius - planet_radius) * atmosphere_falloff;
-		float atmo_thickness = atmosphere_radius - planet_radius;
 
 		for (int i = 0; i < atmosphere_steps; i++) {
 			if (transmittance < 0.01) break;
@@ -80,16 +79,20 @@ void fragment() {
 			// --- Atmosphere density (exponential falloff) ---
 			float atmo_dens = exp(-altitude / scale_height) * atmosphere_density;
 
-			// --- Cloud density (at cloud shell altitude) ---
+			// --- Cloud density (between lower and upper radius) ---
 			float cloud_dens = 0.0;
 			if (cloud_coverage > 0.0) {
-				float cloud_alt = cloud_shell_radius - planet_radius;
-				float proximity = 1.0 - clamp(abs(altitude - cloud_alt) / max(cloud_thickness * atmo_thickness, 0.001), 0.0, 1.0);
-				if (proximity > 0.0) {
+				float sample_r = length(sample_point);
+				if (sample_r >= cloud_lower_radius && sample_r <= cloud_upper_radius) {
+					// Smooth fade at cloud layer edges
+					float cloud_band = cloud_upper_radius - cloud_lower_radius;
+					float band_pos = (sample_r - cloud_lower_radius) / max(cloud_band, 0.001);
+					float edge_fade = smoothstep(0.0, 0.2, band_pos) * smoothstep(1.0, 0.8, band_pos);
+
 					vec3 cloud_uv = normalize(sample_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
 					float cn = texture(cloud_noise, cloud_uv).r;
 					float threshold = 1.0 - cloud_coverage;
-					cloud_dens = smoothstep(threshold - 0.05, threshold + 0.05, cn) * proximity;
+					cloud_dens = smoothstep(threshold - 0.05, threshold + 0.05, cn) * edge_fade;
 				}
 			}
 
