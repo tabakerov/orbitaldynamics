@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-sea_level = 0.128
+sea_level = 0.572
 water_color_shallow = Color(0.2, 0.4, 0.5, 1)
 water_color_deep = Color(0.05, 0.15, 0.25, 1)
 wave_intensity = 0.1
@@ -12,10 +12,10 @@ wave_speed = 0.3
 biome_vegetation = 0.05
 biome_sand = 0.731
 biome_rock = 0.15
-color_vegetation = Color(0.35, 0.45, 0.1, 1)
+color_vegetation = Color(0.48764354, 0.625682, 0.14951882, 1)
 color_sand = Color(0.9, 0.7, 0.35, 1)
-color_rock = Color(0.55, 0.45, 0.35, 1)
-mountain_intensity = 0.916
+color_rock = Color(0.75949174, 0.65489274, 0.54752624, 1)
+mountain_intensity = 0.499
 snow_level = 0.64
 cloud_coverage_lower = 0.0
 cloud_coverage_upper = 0.0
@@ -27,7 +27,7 @@ atmosphere_radius = 1.5
 atmosphere_rayleigh_strength = 0.181
 atmosphere_mie_strength = 0.5
 atmosphere_falloff = 0.111
-atmosphere_steps = 36
+atmosphere_steps = 52
 cloud_shadows_enabled = true
 ao_strength = 1.0
 seed = 137

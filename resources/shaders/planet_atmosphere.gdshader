@@ -231,7 +231,6 @@ void fragment() {
 					float cloud_band = cloud_upper_radius - cloud_lower_radius;
 					float band_pos = (sample_r - cloud_lower_radius) / max(cloud_band, 0.001);
 					float edge_fade = smoothstep(0.0, 0.15, band_pos) * smoothstep(1.0, 0.85, band_pos);
-					// Interpolate coverage between lower and upper
 					float coverage = mix(cloud_coverage_lower, cloud_coverage_upper, band_pos);
 					if (coverage > 0.0) {
 						vec3 cloud_uv = normalize(sample_point) * cloud_noise_scale * 0.8 * 0.5 + 0.5;
