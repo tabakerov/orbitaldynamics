@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://6hj1yrsnfljy"]
 
-[ext_resource type="Script" uid="uid://l8xcchvv582h" path="res://scripts/level.gd" id="1"]
+[ext_resource type="Script" uid="uid://4tx8ew8o0fac" path="res://scripts/level.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/planet.tscn" id="2"]
 [ext_resource type="Resource" uid="uid://dpcnq1rf6ykbk" path="res://resources/planet_medium.tres" id="3"]
 [ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_t0hvh"]
@@ -9,33 +9,27 @@
 [ext_resource type="PackedScene" path="res://scenes/target.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="7"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="9_kfebt"]
-[ext_resource type="PackedScene" path="res://scenes/black_hole.tscn" id="10_r72dd"]
-[ext_resource type="Resource" path="res://resources/planet_earth.tres" id="11_earth"]
-[ext_resource type="Resource" path="res://resources/planet_desert.tres" id="12_desert"]
+[ext_resource type="Resource" uid="uid://m26q17dx072y" path="res://resources/planet_earth.tres" id="11_earth"]
+[ext_resource type="Resource" uid="uid://doslh2v18nmv3" path="res://resources/planet_desert.tres" id="12_desert"]
 
 [sub_resource type="Resource" id="Resource_kfebt"]
 script = ExtResource("3_t0hvh")
 mass = 100.0
-
-[sub_resource type="Resource" id="Resource_r72dd"]
-script = ExtResource("3_t0hvh")
-mass = 100000.0
-metadata/_custom_type_script = "uid://v20k51gxg78m"
 
 [node name="Level01" type="Node3D" unique_id=1842903300]
 script = ExtResource("1")
 
 [node name="Planet" parent="." unique_id=399142064 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.63118, 0, -73.466354)
+visual_data = ExtResource("11_earth")
 body_data = SubResource("Resource_kfebt")
 initial_velocity = Vector3(0, 0, 9.5)
-visual_data = ExtResource("11_earth")
 
 [node name="Planet2" parent="." unique_id=1350557644 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3688202, 0, -74.26636)
+visual_data = ExtResource("12_desert")
 body_data = ExtResource("3")
 initial_velocity = Vector3(0, 0, -0.1)
-visual_data = ExtResource("12_desert")
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1688194, 0, 0.22027588)
@@ -51,14 +45,10 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.22
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.112026, 0, -71.91403)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
-transform = Transform3D(1, 0, 0, 0, 0.6741477, 0.73859656, 0, -0.73859656, 0.6741477, 0, 8.4938345, 0)
+transform = Transform3D(1, 0, 0, 0, 0.994375, 0.10591697, 0, -0.10591697, 0.994375, 0, 0.018666267, 0)
+shadow_enabled = true
+sky_mode = 1
 
 [node name="BackgroundScatter" parent="." unique_id=605665463 instance=ExtResource("9_kfebt")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -30, -55.868397)
-volume_size = Vector3(300, 50, 300)
-
-[node name="BlackHole" parent="." unique_id=2091670237 instance=ExtResource("10_r72dd")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.2191772, -46.630135)
-lensing_radius = 10.0
-body_data = SubResource("Resource_r72dd")
-stationary = true
+volume_size = Vector3(400, 50, 300)

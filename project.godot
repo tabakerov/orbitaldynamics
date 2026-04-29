@@ -20,6 +20,11 @@ config/run/main_scene="res://scenes/main.tscn"
 
 CelestialSim="*res://scripts/celestial_simulation.gd"
 
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+
 [filesystem]
 
 import/blender/enabled=false

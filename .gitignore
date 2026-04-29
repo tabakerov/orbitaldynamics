@@ -1,6 +1,20 @@
-# Godot 4+ specific ignores
+# Godot editor and generated state
 .godot/
 /android/
+export_credentials.cfg
+
+# Local workspace state
 .superpowers/
 .worktrees/
-*.uid
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Exported builds
+/out/
+/build/
+/builds/
+/dist/
+/exports/
+/*.zip

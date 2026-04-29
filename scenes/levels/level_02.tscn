@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://byvtewimqt0ev"]
 
-[ext_resource type="Script" uid="uid://l8xcchvv582h" path="res://scripts/level.gd" id="1_ppbiy"]
+[ext_resource type="Script" uid="uid://4tx8ew8o0fac" path="res://scripts/level.gd" id="1_ppbiy"]
 [ext_resource type="PackedScene" path="res://scenes/celestial_body.tscn" id="2_c6rld"]
 [ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_yklhy"]
 [ext_resource type="Resource" uid="uid://dpcnq1rf6ykbk" path="res://resources/planet_medium.tres" id="4_o4ql5"]
