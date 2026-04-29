@@ -4,6 +4,12 @@ extends Node3D
 signal level_completed
 signal ship_crashed(crash_position: Vector3)
 
+@export_group("Intro")
+@export_multiline var intro_message: String = ""
+@export_range(0.0, 60.0, 0.1, "or_greater") var intro_timeout_seconds: float = 0.0
+@export var intro_show_continue_button: bool = true
+@export var intro_continue_button_text: String = "Продолжить"
+
 
 func _ready() -> void:
 	_init_celestial_sim()

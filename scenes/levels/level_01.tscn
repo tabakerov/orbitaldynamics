@@ -18,6 +18,7 @@ mass = 100.0
 
 [node name="Level01" type="Node3D" unique_id=1842903300]
 script = ExtResource("1")
+intro_message = "WASD включает отдельные двигатели корабля.\nДоберитесь до жёлтой цели; если она за экраном, следуйте указателю у края."
 
 [node name="Planet" parent="." unique_id=399142064 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.63118, 0, -73.466354)
