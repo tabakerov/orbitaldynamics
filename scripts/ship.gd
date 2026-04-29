@@ -6,10 +6,9 @@ extends RigidBody3D
 @export var left_engine_scene: PackedScene
 @export var right_engine_scene: PackedScene
 @export var starting_fuel: float = 200.0
-@export var crash_velocity: float = 15.0
 
 signal fuel_changed(current: float, maximum: float)
-signal crashed
+signal crashed(crash_position: Vector3)
 
 var fuel: float
 var max_fuel: float
@@ -17,6 +16,7 @@ var max_fuel: float
 var _engines: Dictionary = {}
 var _prev_stick_angle: float = 0.0
 var _stick_active: bool = false
+var _crashed: bool = false
 
 const STICK_DEADZONE: float = 0.2
 const GIMBAL_KEYBOARD_SPEED: float = 2.0
@@ -48,6 +48,8 @@ func _setup_engine(slot: String, scene: PackedScene, mount: Node3D) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _crashed:
+		return
 	_handle_engine_toggles()
 	_update_thrust()
 	_update_gimbal(delta)
@@ -132,5 +134,49 @@ func _drain_fuel(delta: float) -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if body is CelestialBody:
-		if linear_velocity.length() > crash_velocity:
-			crashed.emit()
+		_crash(body)
+
+
+func _crash(body: CelestialBody) -> void:
+	if _crashed:
+		return
+	_crashed = true
+	_stop_engines()
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	freeze = true
+	sleeping = true
+	set_physics_process(false)
+	crashed.emit(_get_crash_position(body))
+
+
+func _stop_engines() -> void:
+	for engine: ShipEngine in _engines.values():
+		engine.active = false
+		engine.thrust_magnitude = 0.0
+
+
+func _get_crash_position(body: CelestialBody) -> Vector3:
+	var offset := global_position - body.global_position
+	if offset.length_squared() <= 0.0001:
+		return global_position
+
+	var radius := _get_body_radius(body)
+	if radius <= 0.0:
+		return global_position
+
+	return body.global_position + offset.normalized() * radius
+
+
+func _get_body_radius(body: CelestialBody) -> float:
+	var collision := body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if not collision:
+		return body.body_data.radius if body.body_data else 0.0
+
+	var sphere_shape := collision.shape as SphereShape3D
+	if not sphere_shape:
+		return body.body_data.radius if body.body_data else 0.0
+
+	var basis := body.global_transform.basis
+	var scale := maxf(basis.x.length(), maxf(basis.y.length(), basis.z.length()))
+	return sphere_shape.radius * scale
