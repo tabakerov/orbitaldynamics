@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="6_km0xc"]
 [ext_resource type="PackedScene" path="res://scenes/target.tscn" id="7_n536o"]
 [ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="8_m2jhg"]
+[ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="9_c6rld"]
 
 [sub_resource type="Resource" id="Resource_kfebt"]
 script = ExtResource("3_yklhy")
@@ -52,3 +53,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.112026, 0, -71.91403)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
 transform = Transform3D(1, 0, 0, 0, 0.6741477, 0.73859656, 0, -0.73859656, 0.6741477, 0, 8.4938345, 0)
+
+[node name="BackgroundScatter" parent="." unique_id=605665463 instance=ExtResource("9_c6rld")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -55.60448, -198.78662)
+volume_size = Vector3(500, 50, 500)

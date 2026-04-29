@@ -18,6 +18,10 @@ func set_target(node: Node3D) -> void:
 		rotation.y = target.rotation.y
 
 
+func get_camera() -> Camera3D:
+	return _camera
+
+
 func _physics_process(_delta: float) -> void:
 	if target:
 		global_position.x = target.global_position.x

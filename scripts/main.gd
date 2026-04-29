@@ -93,7 +93,7 @@ func _load_level(index: int) -> void:
 	var ship := _current_level.get_ship()
 	if ship:
 		_camera_rig.set_target(ship)
-		_hud.setup(ship)
+		_hud.setup(ship, _camera_rig.get_camera(), _current_level.get_target())
 
 	_loading = false
 

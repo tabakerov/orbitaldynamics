@@ -52,6 +52,13 @@ func get_ship() -> Ship:
 	return null
 
 
+func get_target() -> Target:
+	for child in get_children():
+		if child is Target:
+			return child
+	return null
+
+
 func spawn_crash_explosion(crash_position: Vector3) -> void:
 	var particles := GPUParticles3D.new()
 	particles.name = "CrashExplosion"
