@@ -5,3 +5,4 @@
 [resource]
 script = ExtResource("1")
 mass = 5000.0
+radius = 5.0

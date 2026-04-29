@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="7_x4job"]
 [ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="8_uak5e"]
 [ext_resource type="PackedScene" path="res://scenes/target.tscn" id="9_bjw12"]
-[ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="10_uiqam"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="11_vvomp"]
 
 [sub_resource type="Resource" id="Resource_kfebt"]
@@ -23,13 +22,13 @@ intro_message = "WASD включает отдельные двигатели к�
 
 [node name="Planet" parent="." unique_id=399142064 instance=ExtResource("2_x7efi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56.63118, 0, -73.466354)
-visual_data = ExtResource("3_fdkrh")
+visual_data = ExtResource("5_4kcja")
 body_data = SubResource("Resource_kfebt")
 initial_velocity = Vector3(0, 0, 9.5)
 
 [node name="Planet2" parent="." unique_id=1350557644 instance=ExtResource("2_x7efi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3688202, 0, -74.26636)
-visual_data = ExtResource("5_4kcja")
+visual_data = ExtResource("3_fdkrh")
 body_data = ExtResource("6_lepjs")
 initial_velocity = Vector3(0, 0, -0.1)
 
@@ -42,9 +41,6 @@ right_engine_scene = ExtResource("8_uak5e")
 
 [node name="Target" parent="." unique_id=40697833 instance=ExtResource("9_bjw12")]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.22620964, 0, -112.87228)
-
-[node name="FuelPickup" parent="." unique_id=1855354826 instance=ExtResource("10_uiqam")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.112026, 0, -71.91403)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
 transform = Transform3D(1, 0, 0, 0, 0.994375, 0.10591697, 0, -0.10591697, 0.994375, 0, 0.018666267, 0)
