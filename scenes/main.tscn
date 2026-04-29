@@ -1,16 +1,15 @@
 [gd_scene format=3 uid="uid://rmlvcedhusx8"]
 
 [ext_resource type="Script" uid="uid://bphsh2nnni8yq" path="res://scripts/main.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/camera_rig.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://dnij6mwewbskt" path="res://scenes/camera_rig.tscn" id="2"]
 [ext_resource type="Script" uid="uid://ri8kx1vkrsko" path="res://scripts/hud.gd" id="3"]
-[ext_resource type="PackedScene" uid="uid://6hj1yrsnfljy" path="res://scenes/levels/level_01.tscn" id="4"]
-[ext_resource type="Script" path="res://scripts/level_select.gd" id="5"]
-[ext_resource type="PackedScene" path="res://scenes/levels/level_02.tscn" id="6"]
-
-[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+[ext_resource type="PackedScene" uid="uid://bktj4dq2gs2av" path="res://scenes/levels/level_010.tscn" id="3_o6xl0"]
+[ext_resource type="PackedScene" uid="uid://s0lkekx5slqj" path="res://scenes/levels/level_002.tscn" id="3_tipki"]
+[ext_resource type="PackedScene" uid="uid://6hj1yrsnfljy" path="res://scenes/levels/level_001.tscn" id="4"]
+[ext_resource type="Script" uid="uid://b2br6clni3fkp" path="res://scripts/level_select.gd" id="5"]
+[ext_resource type="PackedScene" uid="uid://byvtewimqt0ev" path="res://scenes/levels/level_020.tscn" id="6"]
 
 [sub_resource type="Sky" id="sky"]
-sky_material = SubResource("sky_mat")
 
 [sub_resource type="Environment" id="env"]
 background_mode = 2
@@ -19,18 +18,18 @@ ambient_light_source = 3
 ambient_light_color = Color(0.3, 0.3, 0.35, 1)
 ambient_light_energy = 0.5
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" unique_id=378044890]
 script = ExtResource("1")
-levels = Array[PackedScene]([ExtResource("4"), ExtResource("6")])
+levels = Array[PackedScene]([ExtResource("4"), ExtResource("3_tipki"), ExtResource("3_o6xl0"), ExtResource("6")])
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=495406596]
 environment = SubResource("env")
 
-[node name="CameraRig" parent="." instance=ExtResource("2")]
+[node name="CameraRig" parent="." unique_id=271585640 instance=ExtResource("2")]
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1640224254]
 
-[node name="HUD" type="Control" parent="CanvasLayer"]
+[node name="HUD" type="Control" parent="CanvasLayer" unique_id=1002797421]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -40,7 +39,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("3")
 
-[node name="FuelBar" type="ProgressBar" parent="CanvasLayer/HUD"]
+[node name="FuelBar" type="ProgressBar" parent="CanvasLayer/HUD" unique_id=1405466369]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
@@ -52,7 +51,7 @@ max_value = 200.0
 value = 200.0
 show_percentage = false
 
-[node name="FuelLabel" type="Label" parent="CanvasLayer/HUD"]
+[node name="FuelLabel" type="Label" parent="CanvasLayer/HUD" unique_id=472789896]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = -1
@@ -62,11 +61,11 @@ anchor_right = 0.25
 anchor_bottom = 0.92
 text = "Fuel: 100%"
 
-[node name="MenuLayer" type="CanvasLayer" parent="."]
+[node name="MenuLayer" type="CanvasLayer" parent="." unique_id=2097258479]
 process_mode = 3
 layer = 10
 
-[node name="LevelSelect" type="Control" parent="MenuLayer"]
+[node name="LevelSelect" type="Control" parent="MenuLayer" unique_id=371236813]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -75,7 +74,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("5")
 
-[node name="Background" type="ColorRect" parent="MenuLayer/LevelSelect"]
+[node name="Background" type="ColorRect" parent="MenuLayer/LevelSelect" unique_id=732038977]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -84,7 +83,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.12, 1)
 
-[node name="VBox" type="VBoxContainer" parent="MenuLayer/LevelSelect"]
+[node name="VBox" type="VBoxContainer" parent="MenuLayer/LevelSelect" unique_id=1522713581]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -99,27 +98,27 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="MenuLayer/LevelSelect/VBox"]
+[node name="Title" type="Label" parent="MenuLayer/LevelSelect/VBox" unique_id=1022345235]
 layout_mode = 2
 text = "ORBITAL DYNAMICS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Subtitle" type="Label" parent="MenuLayer/LevelSelect/VBox"]
+[node name="Subtitle" type="Label" parent="MenuLayer/LevelSelect/VBox" unique_id=340480790]
 layout_mode = 2
 text = "Select a level"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Spacer" type="Control" parent="MenuLayer/LevelSelect/VBox"]
+[node name="Spacer" type="Control" parent="MenuLayer/LevelSelect/VBox" unique_id=459914842]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
-[node name="LevelList" type="VBoxContainer" parent="MenuLayer/LevelSelect/VBox"]
+[node name="LevelList" type="VBoxContainer" parent="MenuLayer/LevelSelect/VBox" unique_id=1796391603]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2146195079]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 50, 0)
 light_energy = 1.5

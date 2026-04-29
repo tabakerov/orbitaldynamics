@@ -67,11 +67,11 @@ func _handle_engine_toggles() -> void:
 
 func _set_engine_active(action: String, slot: String) -> void:
 	if slot in _engines:
-		_engines[slot].active = Input.is_action_pressed(action)
+		_engines[slot].active = fuel > 0.0 and Input.is_action_pressed(action)
 
 
 func _update_thrust() -> void:
-	var magnitude := Input.get_action_strength("thrust")
+	var magnitude := Input.get_action_strength("thrust") if fuel > 0.0 else 0.0
 	for engine: ShipEngine in _engines.values():
 		engine.thrust_magnitude = magnitude
 
@@ -130,6 +130,8 @@ func _drain_fuel(delta: float) -> void:
 	if drain > 0.0:
 		fuel = maxf(fuel - drain, 0.0)
 		fuel_changed.emit(fuel, max_fuel)
+		if fuel <= 0.0:
+			_stop_engines()
 
 
 func _on_body_entered(body: Node) -> void:
