@@ -8,6 +8,8 @@ uniform float ring_size : hint_range(0.0, 0.4) = 0.12;
 uniform vec4 ring_color : source_color = vec4(1.0, 0.4, 0.05, 1.0);
 uniform float ring_intensity : hint_range(0.0, 10.0) = 3.0;
 uniform float edge_fade_start : hint_range(0.2, 0.5) = 0.45;
+uniform float distortion_falloff_start : hint_range(0.0, 0.5) = 0.18;
+uniform float chromatic_aberration : hint_range(0.0, 1.0) = 0.25;
 
 void fragment() {
 	vec2 center_offset = UV - vec2(0.5);
@@ -19,10 +21,13 @@ void fragment() {
 
 	// Gravitational lensing — push apparent positions outward
 	float warp = distortion / (dist * dist + 0.005);
+	float warp_fade = 1.0 - smoothstep(distortion_falloff_start, edge_fade_start, dist);
+	warp *= warp_fade;
 	vec2 warp_offset = dir * warp * fade;
 
-	// Chromatic aberration near the center
-	float aberration = warp * 0.25;
+	// Chromatic aberration is strongest near the center and fades toward the lens edge.
+	float aberration_fade = 1.0 - smoothstep(horizon_size, edge_fade_start, dist);
+	float aberration = warp * chromatic_aberration * aberration_fade;
 	vec3 col;
 	col.r = textureLod(screen_texture, SCREEN_UV + dir * (warp + aberration) * fade, 0.0).r;
 	col.g = textureLod(screen_texture, SCREEN_UV + warp_offset, 0.0).g;
