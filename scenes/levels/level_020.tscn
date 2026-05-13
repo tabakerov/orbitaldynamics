@@ -49,7 +49,7 @@ transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.22
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.112026, 0, -71.91403)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
-transform = Transform3D(1, 0, 0, 0, 0.6741477, 0.73859656, 0, -0.73859656, 0.6741477, 0, 8.4938345, 0)
+transform = Transform3D(0.58560866, 0.54646003, 0.5987019, -0.8105939, 0.39478675, 0.43252856, 0, -0.73859656, 0.6741477, 0, 8.4938345, 0)
 
 [node name="BackgroundScatter" parent="." unique_id=605665463 instance=ExtResource("9_c6rld")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -55.60448, -198.78662)

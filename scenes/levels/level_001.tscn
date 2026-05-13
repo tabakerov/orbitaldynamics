@@ -18,7 +18,7 @@ loadout = ExtResource("5")
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, -100)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1844316755]
-transform = Transform3D(1, 0, 0, 0, 0.994375, 0.10591697, 0, -0.10591697, 0.994375, 0, 0.018666267, 0)
+transform = Transform3D(1, 0, 0, 0, 0.15315837, 0.9882017, 0, -0.9882017, 0.15315837, 0, 0.018666267, 0)
 shadow_enabled = true
 sky_mode = 1
 
