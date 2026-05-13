@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://4tx8ew8o0fac" path="res://scripts/level.gd" id="1_c0eio"]
 [ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="2_a34f6"]
-[ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="3_2460i"]
+[ext_resource type="Resource" path="res://resources/loadouts/default.tres" id="3_2460i"]
 [ext_resource type="PackedScene" path="res://scenes/target.tscn" id="4_rmptc"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="5_rjyn4"]
 [ext_resource type="PackedScene" path="res://scenes/black_hole.tscn" id="6_a34f6"]
@@ -17,11 +17,8 @@ script = ExtResource("1_c0eio")
 intro_message = "Q/E - поворачивают выбранные двигатели"
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("2_a34f6")]
-front_engine_scene = ExtResource("3_2460i")
-rear_engine_scene = ExtResource("3_2460i")
-left_engine_scene = ExtResource("3_2460i")
-right_engine_scene = ExtResource("3_2460i")
-starting_fuel = 30.0
+loadout = ExtResource("3_2460i")
+starting_fuel_override = 30.0
 
 [node name="Target" parent="." unique_id=40697833 instance=ExtResource("4_rmptc")]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 35.08354, 0, -35.967472)

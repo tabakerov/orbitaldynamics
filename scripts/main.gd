@@ -147,7 +147,7 @@ func _on_ship_crashed(crash_position: Vector3) -> void:
 
 
 func _process(_delta: float) -> void:
-	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("engine_rear"):
+	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("mount_rear"):
 		var focused := get_viewport().gui_get_focus_owner()
 		if (
 			_intro_overlay

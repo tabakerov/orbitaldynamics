@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="FuelTankProfile" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/fuel_tank_profile.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/modules/fuel_tank.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+module_scene = ExtResource("2")
+display_name = "Large Fuel Tank"
+capacity = 250.0
+dry_mass = 2.0
+max_pump_rate = 50.0
+starting_fill = 1.0

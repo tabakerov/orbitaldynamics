@@ -7,7 +7,7 @@
 [ext_resource type="Resource" uid="uid://doslh2v18nmv3" path="res://resources/planet_desert.tres" id="5_4kcja"]
 [ext_resource type="Resource" uid="uid://dpcnq1rf6ykbk" path="res://resources/planet_medium.tres" id="6_lepjs"]
 [ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="7_x4job"]
-[ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="8_uak5e"]
+[ext_resource type="Resource" path="res://resources/loadouts/default.tres" id="8_uak5e"]
 [ext_resource type="PackedScene" path="res://scenes/target.tscn" id="9_bjw12"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="11_vvomp"]
 
@@ -33,10 +33,7 @@ initial_velocity = Vector3(0, 0, -0.1)
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("7_x4job")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1688194, 0, 0.22027588)
-front_engine_scene = ExtResource("8_uak5e")
-rear_engine_scene = ExtResource("8_uak5e")
-left_engine_scene = ExtResource("8_uak5e")
-right_engine_scene = ExtResource("8_uak5e")
+loadout = ExtResource("8_uak5e")
 
 [node name="Target" parent="." unique_id=40697833 instance=ExtResource("9_bjw12")]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.22620964, 0, -112.87228)

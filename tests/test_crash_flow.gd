@@ -1,13 +1,13 @@
 extends Node
 
 const BodyScene = preload("res://scenes/celestial_body.tscn")
-const EngineScene = preload("res://scenes/engine.tscn")
 const ShipScene = preload("res://scenes/ship.tscn")
+const DefaultLoadout = preload("res://resources/loadouts/default.tres")
 
 
 func _ready() -> void:
 	_test_ship_has_no_space_damping()
-	_test_ship_engines_stop_without_fuel()
+	_test_ship_engines_produce_no_thrust_without_fuel()
 	_test_ship_crashes_on_any_celestial_body_contact()
 	_test_crash_explosion_spawns_particles()
 	print("All crash flow tests passed!")
@@ -39,26 +39,33 @@ func _test_ship_has_no_space_damping() -> void:
 	ship.queue_free()
 
 
-func _test_ship_engines_stop_without_fuel() -> void:
+func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 	var ship := ShipScene.instantiate() as Ship
-	ship.front_engine_scene = EngineScene
+	ship.loadout = DefaultLoadout
 	add_child(ship)
 	ship.fuel = 0.0
 
-	Input.action_press("engine_front")
+	Input.action_press("mount_front")
 	Input.action_press("thrust")
-	ship._handle_engine_toggles()
-	ship._update_thrust()
-	Input.action_release("engine_front")
+	ship._update_module_inputs()
+	Input.action_release("mount_front")
 	Input.action_release("thrust")
 
-	var engine := ship.get_node("MountFront").get_child(0) as ShipEngine
-	assert(not engine.active, "Engine should not stay active when fuel is empty.")
+	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
+	assert(module != null, "Front engine module should exist after loadout spawn.")
 	assert(
-		is_zero_approx(engine.thrust_magnitude),
-		"Engine thrust magnitude should be zero when fuel is empty. Got: %f" % engine.thrust_magnitude,
+		module.active,
+		"Module should remain active when fuel is empty (visual indicator per spec §3.4).",
 	)
-	print("  PASS: ship engines stop without fuel")
+	assert(
+		module.get_thrust_vector().length_squared() == 0.0,
+		"Engine should produce zero thrust when fuel is empty.",
+	)
+	assert(
+		module.get_fuel_drain(0.016) == 0.0,
+		"Engine should not drain fuel when fuel is empty.",
+	)
+	print("  PASS: ship engines produce no thrust without fuel")
 
 	ship.queue_free()
 

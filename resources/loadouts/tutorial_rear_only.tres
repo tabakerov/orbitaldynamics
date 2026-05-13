@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ShipLoadout" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ship_loadout.gd" id="1"]
+[ext_resource type="Resource" path="res://resources/hulls/rectangular.tres" id="2"]
+[ext_resource type="Resource" path="res://resources/engines/engine_standard.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+hull = ExtResource("2")
+starting_internal_fuel = 10.0
+rear_module = ExtResource("3")
