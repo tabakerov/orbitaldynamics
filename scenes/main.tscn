@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" uid="uid://6hj1yrsnfljy" path="res://scenes/levels/level_001.tscn" id="4"]
 [ext_resource type="Script" uid="uid://b2br6clni3fkp" path="res://scripts/level_select.gd" id="5"]
 [ext_resource type="PackedScene" uid="uid://byvtewimqt0ev" path="res://scenes/levels/level_020.tscn" id="6"]
+[ext_resource type="PackedScene" uid="uid://b8modscreen001" path="res://scenes/ship_modifier_screen.tscn" id="7_modscr"]
+[ext_resource type="PackedScene" uid="uid://b8level015demo" path="res://scenes/levels/level_015.tscn" id="8_lvl015"]
 
 [sub_resource type="Sky" id="sky"]
 
@@ -20,7 +22,7 @@ ambient_light_energy = 0.5
 
 [node name="Main" type="Node3D" unique_id=378044890]
 script = ExtResource("1")
-levels = Array[PackedScene]([ExtResource("4"), ExtResource("3_tipki"), ExtResource("3_o6xl0"), ExtResource("6")])
+levels = Array[PackedScene]([ExtResource("4"), ExtResource("3_tipki"), ExtResource("3_o6xl0"), ExtResource("8_lvl015"), ExtResource("6")])
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=495406596]
 environment = SubResource("env")
@@ -118,6 +120,8 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 10
+
+[node name="ShipModifierScreen" parent="MenuLayer" instance=ExtResource("7_modscr")]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2146195079]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 50, 0)

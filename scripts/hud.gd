@@ -40,6 +40,7 @@ const TARGET_INDICATOR_DIRECTION_EPSILON: float = 0.001
 var _camera: Camera3D
 var _target: Target
 var _target_indicator: TargetIndicator
+var _dock_prompt: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
 @onready var _fuel_label: Label = %FuelLabel
@@ -51,6 +52,36 @@ func _ready() -> void:
 	_target_indicator.visible = false
 	_target_indicator.z_index = 10
 	add_child(_target_indicator)
+
+	_dock_prompt = Label.new()
+	_dock_prompt.name = "DockPrompt"
+	_dock_prompt.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_dock_prompt.offset_left = -220.0
+	_dock_prompt.offset_top = 32.0
+	_dock_prompt.offset_right = 220.0
+	_dock_prompt.offset_bottom = 88.0
+	_dock_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_dock_prompt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_dock_prompt.add_theme_font_size_override("font_size", 24)
+	_dock_prompt.add_theme_color_override("font_color", Color(0.95, 0.6, 1, 1))
+	_dock_prompt.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08, 1))
+	_dock_prompt.add_theme_constant_override("outline_size", 4)
+	_dock_prompt.visible = false
+	_dock_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dock_prompt.z_index = 10
+	add_child(_dock_prompt)
+
+
+func show_dock_prompt(station_name: String = "станции") -> void:
+	if not _dock_prompt:
+		return
+	_dock_prompt.text = "F · LB — стыковка с %s" % station_name
+	_dock_prompt.visible = true
+
+
+func hide_dock_prompt() -> void:
+	if _dock_prompt:
+		_dock_prompt.visible = false
 
 
 func setup(ship: Ship, camera: Camera3D = null, target: Target = null) -> void:

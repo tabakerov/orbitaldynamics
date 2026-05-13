@@ -26,9 +26,37 @@ var _crashed: bool = false
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	if loadout:
+		loadout = loadout.duplicate()
 		_build_from_loadout()
 	_recalculate_mass_properties()
 	fuel_changed.emit(fuel, max_fuel)
+
+
+func apply_loadout_change(binding: int, new_profile: ModuleProfile) -> void:
+	var existing: ShipModule = _modules.get(binding)
+	if existing:
+		existing.queue_free()
+		_modules.erase(binding)
+
+	var mount_node: Node3D = _mount_nodes.get(binding)
+	if not mount_node:
+		return
+
+	if new_profile and new_profile.module_scene:
+		var module := new_profile.module_scene.instantiate() as ShipModule
+		if module:
+			module.attach(self, new_profile)
+			mount_node.add_child(module)
+			_modules[binding] = module
+
+	if loadout:
+		match binding:
+			MountSlot.Binding.FRONT: loadout.front_module = new_profile
+			MountSlot.Binding.REAR: loadout.rear_module = new_profile
+			MountSlot.Binding.LEFT: loadout.left_module = new_profile
+			MountSlot.Binding.RIGHT: loadout.right_module = new_profile
+
+	_recalculate_mass_properties()
 
 
 func _build_from_loadout() -> void:

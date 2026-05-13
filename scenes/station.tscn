@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://b8stationscene01"]
+
+[ext_resource type="Script" path="res://scripts/station.gd" id="1"]
+
+[sub_resource type="SphereShape3D" id="dock_sphere"]
+radius = 8.0
+
+[sub_resource type="StandardMaterial3D" id="beacon_mat"]
+albedo_color = Color(0.85, 0.35, 1, 1)
+emission_enabled = true
+emission = Color(0.9, 0.4, 1, 1)
+emission_energy_multiplier = 3.5
+
+[sub_resource type="StandardMaterial3D" id="pad_mat"]
+albedo_color = Color(0.18, 0.16, 0.22, 1)
+emission_enabled = true
+emission = Color(0.4, 0.15, 0.5, 1)
+emission_energy_multiplier = 0.5
+metallic = 0.6
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="ring_mat"]
+albedo_color = Color(0.7, 0.3, 1, 1)
+emission_enabled = true
+emission = Color(0.8, 0.35, 1, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="CylinderMesh" id="beacon_mesh"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 1.0
+
+[sub_resource type="CylinderMesh" id="pad_mesh"]
+top_radius = 3.5
+bottom_radius = 3.5
+height = 0.15
+
+[sub_resource type="TorusMesh" id="ring_mesh"]
+inner_radius = 3.2
+outer_radius = 3.5
+
+[node name="Station" type="Area3D"]
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("dock_sphere")
+
+[node name="Pad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+material_override = SubResource("pad_mat")
+mesh = SubResource("pad_mesh")
+
+[node name="Ring" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+material_override = SubResource("ring_mat")
+mesh = SubResource("ring_mesh")
+
+[node name="BeaconNE" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0.0, -2.4)
+material_override = SubResource("beacon_mat")
+mesh = SubResource("beacon_mesh")
+
+[node name="BeaconNW" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.0, -2.4)
+material_override = SubResource("beacon_mat")
+mesh = SubResource("beacon_mesh")
+
+[node name="BeaconSE" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0.0, 2.4)
+material_override = SubResource("beacon_mat")
+mesh = SubResource("beacon_mesh")
+
+[node name="BeaconSW" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0.0, 2.4)
+material_override = SubResource("beacon_mat")
+mesh = SubResource("beacon_mesh")
+
+[node name="StationLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+light_color = Color(0.85, 0.4, 1, 1)
+light_energy = 0.6
+omni_range = 14.0
+omni_attenuation = 1.4

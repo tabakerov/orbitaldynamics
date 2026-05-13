@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StationProfile" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/station_profile.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/module_profile.gd" id="2"]
+[ext_resource type="Resource" path="res://resources/engines/engine_standard.tres" id="3"]
+[ext_resource type="Resource" path="res://resources/fuel_tanks/tank_basic.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/fuel_tanks/tank_large.tres" id="5"]
+[ext_resource type="Resource" path="res://resources/cargo/crate_small.tres" id="6"]
+[ext_resource type="Resource" path="res://resources/cargo/crate_large.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Service Station — Full"
+available_modules = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")])
+dock_radius = 8.0

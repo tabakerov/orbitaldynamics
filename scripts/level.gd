@@ -65,6 +65,14 @@ func get_target() -> Target:
 	return null
 
 
+func get_stations() -> Array[Station]:
+	var result: Array[Station] = []
+	for child in get_children():
+		if child is Station:
+			result.append(child)
+	return result
+
+
 func spawn_crash_explosion(crash_position: Vector3) -> void:
 	var particles := GPUParticles3D.new()
 	particles.name = "CrashExplosion"

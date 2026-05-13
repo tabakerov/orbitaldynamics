@@ -19,10 +19,12 @@ var _crash_menu_btn: Button
 var _completion_overlay: Control
 var _completion_next_btn: Button
 var _completion_menu_btn: Button
+var _current_station: Station
 
 @onready var _camera_rig: CameraRig = $CameraRig
 @onready var _hud: Control = $CanvasLayer/HUD
 @onready var _level_select: Control = $MenuLayer/LevelSelect
+@onready var _modifier_screen: ShipModifierScreen = $MenuLayer/ShipModifierScreen
 
 
 func _ready() -> void:
@@ -37,6 +39,8 @@ func _ready() -> void:
 	_setup_intro_overlay()
 	_setup_crash_overlay()
 	_setup_completion_overlay()
+	_modifier_screen.closed.connect(_on_modifier_closed)
+	_modifier_screen.apply_loadout_change.connect(_on_apply_loadout_change)
 	_show_menu()
 
 
@@ -84,6 +88,8 @@ func _load_level(index: int) -> void:
 	_hide_intro_overlay()
 	_hide_crash_overlay()
 	_hide_completion_overlay()
+	_close_modifier_screen()
+	_clear_station_state()
 	_loading = true
 
 	if _current_level:
@@ -106,6 +112,10 @@ func _load_level(index: int) -> void:
 	if ship:
 		_camera_rig.set_target(ship)
 		_hud.setup(ship, _camera_rig.get_camera(), _current_level.get_target())
+
+	for station in _current_level.get_stations():
+		station.ship_entered_range.connect(_on_ship_entered_station.bind(station))
+		station.ship_exited_range.connect(_on_ship_exited_station.bind(station))
 
 	_loading = false
 	_show_intro_overlay(_current_level)
@@ -170,6 +180,9 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(_event: InputEvent) -> void:
+	if _modifier_screen and _modifier_screen.is_open():
+		return
+
 	if _intro_overlay and _intro_overlay.visible:
 		if Input.is_action_just_pressed("ui_cancel"):
 			_show_menu()
@@ -189,6 +202,11 @@ func _unhandled_input(_event: InputEvent) -> void:
 		if Input.is_action_just_pressed("ui_cancel"):
 			_on_completion_menu_requested()
 			get_viewport().set_input_as_handled()
+		return
+
+	if Input.is_action_just_pressed("station_dock") and _current_station and not _level_select.visible:
+		_open_modifier_screen()
+		get_viewport().set_input_as_handled()
 		return
 
 	if Input.is_action_just_pressed("restart"):
@@ -496,6 +514,8 @@ func _return_to_main_menu() -> void:
 	_hide_intro_overlay()
 	_hide_crash_overlay()
 	_hide_completion_overlay()
+	_close_modifier_screen()
+	_clear_station_state()
 	_hud.visible = false
 	get_tree().paused = false
 
@@ -509,3 +529,53 @@ func _return_to_main_menu() -> void:
 	CelestialSim.clear()
 	_loading = false
 	_show_menu()
+
+
+func _on_ship_entered_station(_ship: Ship, station: Station) -> void:
+	if _modifier_screen.is_open():
+		return
+	_current_station = station
+	_hud.show_dock_prompt(station.get_display_name())
+
+
+func _on_ship_exited_station(_ship: Ship, station: Station) -> void:
+	if station != _current_station:
+		return
+	if _modifier_screen.is_open():
+		return
+	_current_station = null
+	_hud.hide_dock_prompt()
+
+
+func _open_modifier_screen() -> void:
+	if not _current_level or not _current_station:
+		return
+	var ship := _current_level.get_ship()
+	if not ship:
+		return
+	_hud.hide_dock_prompt()
+	_modifier_screen.open(_current_station, ship)
+
+
+func _close_modifier_screen() -> void:
+	if _modifier_screen and _modifier_screen.is_open():
+		_modifier_screen.close()
+
+
+func _on_modifier_closed() -> void:
+	if _current_station:
+		_hud.show_dock_prompt(_current_station.get_display_name())
+
+
+func _on_apply_loadout_change(binding: int, new_profile: ModuleProfile) -> void:
+	if not _current_level:
+		return
+	var ship := _current_level.get_ship()
+	if ship:
+		ship.apply_loadout_change(binding, new_profile)
+
+
+func _clear_station_state() -> void:
+	_current_station = null
+	if _hud:
+		_hud.hide_dock_prompt()

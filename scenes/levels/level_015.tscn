@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://b8level015demo"]
+
+[ext_resource type="Script" uid="uid://4tx8ew8o0fac" path="res://scripts/level.gd" id="1_lvl"]
+[ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="2_ship"]
+[ext_resource type="Resource" path="res://resources/loadouts/cargo_demo.tres" id="3_loadout"]
+[ext_resource type="PackedScene" path="res://scenes/target.tscn" id="4_target"]
+[ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="5_bg"]
+[ext_resource type="PackedScene" uid="uid://b8stationscene01" path="res://scenes/station.tscn" id="6_station"]
+[ext_resource type="Resource" path="res://resources/stations/full_service.tres" id="7_st_profile"]
+
+[node name="Level015" type="Node3D"]
+script = ExtResource("1_lvl")
+intro_message = "У корабля груз в кормовом слоте вместо двигателя. Залети в фиолетовую станцию справа и нажми F (LB на геймпаде) — там можно поменять модули. Дотащи корабль до цели."
+
+[node name="Ship" parent="." instance=ExtResource("2_ship")]
+loadout = ExtResource("3_loadout")
+
+[node name="Station" parent="." instance=ExtResource("6_station")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 4)
+profile = ExtResource("7_st_profile")
+
+[node name="Target" parent="." instance=ExtResource("4_target")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -8, 0, -65)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.994375, 0.10591697, 0, -0.10591697, 0.994375, 0, 0.018666267, 0)
+shadow_enabled = true
+sky_mode = 1
+
+[node name="BackgroundScatter" parent="." instance=ExtResource("5_bg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -30, -30)
+volume_size = Vector3(300, 50, 200)
