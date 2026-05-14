@@ -224,9 +224,9 @@ func _process(_delta: float) -> void:
 
 
 func _handle_pick_mount_polling() -> void:
-	if Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("station_dock"):
+	if _is_menu_cancel_just_pressed() or Input.is_action_just_pressed("station_dock"):
 		close()
-	elif Input.is_action_just_pressed("ui_accept"):
+	elif _is_menu_accept_just_pressed():
 		_enter_module_pick()
 	elif Input.is_action_just_pressed("ui_up"):
 		_select_binding(MountSlot.Binding.FRONT)
@@ -313,9 +313,9 @@ func _refresh_module_highlight() -> void:
 
 
 func _handle_pick_module_polling() -> void:
-	if Input.is_action_just_pressed("ui_cancel"):
+	if _is_menu_cancel_just_pressed():
 		_exit_module_pick()
-	elif Input.is_action_just_pressed("ui_accept"):
+	elif _is_menu_accept_just_pressed():
 		_apply_selected_module()
 	elif Input.is_action_just_pressed("ui_up"):
 		_step_module(-1)
@@ -370,6 +370,18 @@ func _exit_module_pick() -> void:
 func _hide_module_list() -> void:
 	if _module_list_panel:
 		_module_list_panel.visible = false
+
+
+func _is_menu_accept_just_pressed() -> bool:
+	return _is_action_just_pressed("ui_accept") or _is_action_just_pressed("menu_accept")
+
+
+func _is_menu_cancel_just_pressed() -> bool:
+	return _is_action_just_pressed("ui_cancel") or _is_action_just_pressed("menu_cancel")
+
+
+func _is_action_just_pressed(action_name: StringName) -> bool:
+	return InputMap.has_action(action_name) and Input.is_action_just_pressed(action_name)
 
 
 func _refresh_help() -> void:
