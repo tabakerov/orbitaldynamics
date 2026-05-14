@@ -10,18 +10,33 @@ signal ship_crashed(crash_position: Vector3)
 @export var intro_show_continue_button: bool = true
 @export var intro_continue_button_text: String = "Продолжить"
 
+@export_group("Debug")
+@export var debug_visuals_enabled: bool = false
+
+var _debug_visualizer: DebugFlightVisualizer
+
 
 func _ready() -> void:
 	_init_celestial_sim()
 	_connect_ship()
 	_connect_targets()
+	_setup_debug_visualizer()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+		toggle_debug_visuals()
+		get_viewport().set_input_as_handled()
+
+
+func toggle_debug_visuals() -> void:
+	debug_visuals_enabled = not debug_visuals_enabled
+	if _debug_visualizer:
+		_debug_visualizer.enabled = debug_visuals_enabled
 
 
 func _init_celestial_sim() -> void:
-	var bodies: Array[CelestialBody] = []
-	for child in get_children():
-		if child is CelestialBody:
-			bodies.append(child)
+	var bodies := get_celestial_bodies()
 
 	var data: Array[CelestialBodyData] = []
 	var positions := PackedVector3Array()
@@ -65,12 +80,32 @@ func get_target() -> Target:
 	return null
 
 
+func get_celestial_bodies() -> Array[CelestialBody]:
+	var result: Array[CelestialBody] = []
+	for child in get_children():
+		if child is CelestialBody:
+			result.append(child)
+	return result
+
+
 func get_stations() -> Array[Station]:
 	var result: Array[Station] = []
 	for child in get_children():
 		if child is Station:
 			result.append(child)
 	return result
+
+
+func _setup_debug_visualizer() -> void:
+	var ship := get_ship()
+	if not ship:
+		return
+	_debug_visualizer = DebugFlightVisualizer.new()
+	_debug_visualizer.name = "DebugFlightVisualizer"
+	_debug_visualizer.ship = ship
+	_debug_visualizer.celestial_bodies = get_celestial_bodies()
+	_debug_visualizer.enabled = debug_visuals_enabled
+	add_child(_debug_visualizer)
 
 
 func spawn_crash_explosion(crash_position: Vector3) -> void:

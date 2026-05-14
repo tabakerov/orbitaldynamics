@@ -51,10 +51,18 @@ func show_menu(has_active_level: bool) -> void:
 func _process(_delta: float) -> void:
 	if not visible:
 		return
-	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("mount_rear"):
+	if _is_menu_accept_just_pressed():
 		var focused := get_viewport().gui_get_focus_owner()
 		if focused is Button:
 			focused.emit_signal("pressed")
+
+
+func _is_menu_accept_just_pressed() -> bool:
+	return Input.is_action_just_pressed("ui_accept") or _is_action_just_pressed("menu_accept")
+
+
+func _is_action_just_pressed(action_name: StringName) -> bool:
+	return InputMap.has_action(action_name) and Input.is_action_just_pressed(action_name)
 
 
 func _on_level_pressed(index: int) -> void:

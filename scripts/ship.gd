@@ -157,11 +157,37 @@ func _update_gimbal(delta: float) -> void:
 
 
 func _apply_engine_forces() -> void:
+	for sample: Dictionary in get_debug_thrust_force_samples():
+		var module := sample["module"] as ShipModule
+		var force := sample["force"] as Vector3
+		if not module:
+			continue
+		var offset := module.global_position - global_position
+		apply_force(force, offset)
+
+
+func get_debug_thrust_force_samples() -> Array[Dictionary]:
+	var samples: Array[Dictionary] = []
 	for module: ShipModule in _modules.values():
 		var force := module.get_thrust_vector()
 		if force.length_squared() > 0.0:
-			var offset := module.global_position - global_position
-			apply_force(force, offset)
+			samples.append({
+				"module": module,
+				"origin": module.global_position,
+				"force": force,
+			})
+	return samples
+
+
+func get_debug_total_thrust_force() -> Vector3:
+	var total := Vector3.ZERO
+	for sample: Dictionary in get_debug_thrust_force_samples():
+		total += sample["force"] as Vector3
+	return total
+
+
+func get_debug_gravity_acceleration() -> Vector3:
+	return CelestialSim.get_gravity_at(global_position)
 
 
 func _apply_fuel_flow(delta: float) -> void:
@@ -197,7 +223,7 @@ func _apply_fuel_flow(delta: float) -> void:
 
 
 func _apply_gravity() -> void:
-	var gravity := CelestialSim.get_gravity_at(global_position)
+	var gravity := get_debug_gravity_acceleration()
 	apply_central_force(gravity * mass)
 
 

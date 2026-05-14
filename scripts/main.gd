@@ -157,7 +157,7 @@ func _on_ship_crashed(crash_position: Vector3) -> void:
 
 
 func _process(_delta: float) -> void:
-	if Input.is_action_just_pressed("ui_accept") or Input.is_action_just_pressed("mount_rear"):
+	if _is_menu_accept_just_pressed():
 		var focused := get_viewport().gui_get_focus_owner()
 		if (
 			_intro_overlay
@@ -184,7 +184,7 @@ func _unhandled_input(_event: InputEvent) -> void:
 		return
 
 	if _intro_overlay and _intro_overlay.visible:
-		if Input.is_action_just_pressed("ui_cancel"):
+		if _is_menu_cancel_just_pressed():
 			_show_menu()
 			get_viewport().set_input_as_handled()
 		return
@@ -193,13 +193,13 @@ func _unhandled_input(_event: InputEvent) -> void:
 		if Input.is_action_just_pressed("restart"):
 			_on_crash_restart_requested()
 			get_viewport().set_input_as_handled()
-		elif Input.is_action_just_pressed("ui_cancel"):
+		elif _is_menu_cancel_just_pressed():
 			_on_crash_menu_requested()
 			get_viewport().set_input_as_handled()
 		return
 
 	if _completion_overlay and _completion_overlay.visible:
-		if Input.is_action_just_pressed("ui_cancel"):
+		if _is_menu_cancel_just_pressed():
 			_on_completion_menu_requested()
 			get_viewport().set_input_as_handled()
 		return
@@ -213,12 +213,28 @@ func _unhandled_input(_event: InputEvent) -> void:
 		if _level_select.visible:
 			return
 		_load_level(_level_index)
-	if Input.is_action_just_pressed("ui_cancel"):
-		if _level_select.visible:
+	if _level_select.visible:
+		if _is_menu_cancel_just_pressed() or _is_pause_menu_just_pressed():
 			if _current_level:
 				_hide_menu()
-		else:
-			_show_menu()
+	elif _is_pause_menu_just_pressed():
+		_show_menu()
+
+
+func _is_menu_accept_just_pressed() -> bool:
+	return Input.is_action_just_pressed("ui_accept") or _is_action_just_pressed("menu_accept")
+
+
+func _is_menu_cancel_just_pressed() -> bool:
+	return Input.is_action_just_pressed("ui_cancel") or _is_action_just_pressed("menu_cancel")
+
+
+func _is_pause_menu_just_pressed() -> bool:
+	return Input.is_action_just_pressed("ui_cancel") or _is_action_just_pressed("pause_menu")
+
+
+func _is_action_just_pressed(action_name: StringName) -> bool:
+	return InputMap.has_action(action_name) and Input.is_action_just_pressed(action_name)
 
 
 func _setup_intro_overlay() -> void:

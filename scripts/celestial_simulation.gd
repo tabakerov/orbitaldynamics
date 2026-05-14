@@ -61,23 +61,7 @@ func _physics_process(delta: float) -> void:
 
 
 func step(delta: float) -> void:
-	# Compute inter-body gravitational accelerations
-	var accels: Array[Vector3] = []
-	accels.resize(_count)
-	for i in _count:
-		accels[i] = Vector3.ZERO
-
-	for i in _count:
-		for j in range(i + 1, _count):
-			var offset := _positions[j] - _positions[i]
-			var dist := offset.length()
-			if dist < 0.001:
-				continue
-			var dir := offset / dist
-			var accel_on_i := gravitational_constant * _masses[j] / (dist * dist)
-			var accel_on_j := gravitational_constant * _masses[i] / (dist * dist)
-			accels[i] += dir * accel_on_i
-			accels[j] -= dir * accel_on_j
+	var accels := _get_body_accelerations(_positions)
 
 	# Symplectic Euler: velocity first, then position
 	for i in _count:
@@ -111,5 +95,82 @@ func get_body_velocity(index: int) -> Vector3:
 	return _velocities[index]
 
 
+func get_body_gravity_acceleration(index: int) -> Vector3:
+	if index < 0 or index >= _count:
+		return Vector3.ZERO
+	return _get_body_acceleration(index, _positions)
+
+
+func is_body_stationary(index: int) -> bool:
+	if index < 0 or index >= _count:
+		return true
+	return _stationary[index]
+
+
+func predict_body_paths(seconds: float, step_delta: float) -> Array[PackedVector3Array]:
+	var paths: Array[PackedVector3Array] = []
+	paths.resize(_count)
+	for i in _count:
+		var path := PackedVector3Array()
+		if _count > 0:
+			path.append(_positions[i])
+		paths[i] = path
+
+	if _count <= 0:
+		return paths
+
+	var step := maxf(step_delta, 0.01)
+	var total_steps := maxi(1, int(ceil(maxf(seconds, step) / step)))
+	var positions := _positions.duplicate()
+	var velocities := _velocities.duplicate()
+
+	for _step_idx in total_steps:
+		var accels := _get_body_accelerations(positions)
+		for i in _count:
+			if not _stationary[i]:
+				velocities[i] += accels[i] * step
+				positions[i] += velocities[i] * step
+				positions[i].y = 0.0
+				velocities[i].y = 0.0
+			paths[i].append(positions[i])
+	return paths
+
+
 func get_body_count() -> int:
 	return _count
+
+
+func _get_body_accelerations(positions: PackedVector3Array) -> Array[Vector3]:
+	var accels: Array[Vector3] = []
+	accels.resize(_count)
+	for i in _count:
+		accels[i] = Vector3.ZERO
+
+	for i in _count:
+		for j in range(i + 1, _count):
+			var offset := positions[j] - positions[i]
+			var dist := offset.length()
+			if dist < 0.001:
+				continue
+			var dir := offset / dist
+			var accel_on_i := gravitational_constant * _masses[j] / (dist * dist)
+			var accel_on_j := gravitational_constant * _masses[i] / (dist * dist)
+			accels[i] += dir * accel_on_i
+			accels[j] -= dir * accel_on_j
+	return accels
+
+
+func _get_body_acceleration(index: int, positions: PackedVector3Array) -> Vector3:
+	if index < 0 or index >= _count:
+		return Vector3.ZERO
+
+	var accel := Vector3.ZERO
+	for i in _count:
+		if i == index:
+			continue
+		var offset := positions[i] - positions[index]
+		var dist := offset.length()
+		if dist < 0.001:
+			continue
+		accel += offset.normalized() * gravitational_constant * _masses[i] / (dist * dist)
+	return accel
