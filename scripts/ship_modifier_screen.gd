@@ -18,6 +18,7 @@ var _selected_binding: int = MountSlot.Binding.FRONT
 var _selected_module_idx: int = 0
 var _station: Station
 var _ship: Ship
+var _open_cooldown_frames: int = 0
 
 var _title_label: Label
 var _subtitle_label: Label
@@ -47,6 +48,7 @@ func open(station: Station, ship: Ship) -> void:
 	_hide_module_list()
 	_refresh_help()
 	visible = true
+	_open_cooldown_frames = 2
 	get_tree().paused = true
 
 
@@ -209,34 +211,31 @@ func _chip_name(binding: int) -> String:
 	return "?"
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _process(_delta: float) -> void:
 	if not visible:
 		return
+	if _open_cooldown_frames > 0:
+		_open_cooldown_frames -= 1
+		return
 	if _state == State.PICK_MOUNT:
-		_handle_pick_mount_input(event)
+		_handle_pick_mount_polling()
 	else:
-		_handle_pick_module_input(event)
+		_handle_pick_module_polling()
 
 
-func _handle_pick_mount_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("station_dock"):
+func _handle_pick_mount_polling() -> void:
+	if Input.is_action_just_pressed("ui_cancel") or Input.is_action_just_pressed("station_dock"):
 		close()
-		accept_event()
-	elif event.is_action_pressed("ui_accept"):
+	elif Input.is_action_just_pressed("ui_accept"):
 		_enter_module_pick()
-		accept_event()
-	elif event.is_action_pressed("ui_up"):
+	elif Input.is_action_just_pressed("ui_up"):
 		_select_binding(MountSlot.Binding.FRONT)
-		accept_event()
-	elif event.is_action_pressed("ui_down"):
+	elif Input.is_action_just_pressed("ui_down"):
 		_select_binding(MountSlot.Binding.REAR)
-		accept_event()
-	elif event.is_action_pressed("ui_left"):
+	elif Input.is_action_just_pressed("ui_left"):
 		_select_binding(MountSlot.Binding.LEFT)
-		accept_event()
-	elif event.is_action_pressed("ui_right"):
+	elif Input.is_action_just_pressed("ui_right"):
 		_select_binding(MountSlot.Binding.RIGHT)
-		accept_event()
 
 
 func _select_binding(binding: int) -> void:
@@ -246,10 +245,24 @@ func _select_binding(binding: int) -> void:
 
 func _enter_module_pick() -> void:
 	_state = State.PICK_MODULE
-	_selected_module_idx = 0
 	_build_module_list()
+	_selected_module_idx = _find_current_module_idx()
+	_refresh_module_highlight()
 	_module_list_panel.visible = true
 	_refresh_help()
+
+
+func _find_current_module_idx() -> int:
+	if not _ship or not _ship.loadout:
+		return 0
+	var current := _ship.loadout.get_module(_selected_binding)
+	var available := _station.get_available_modules() if _station else []
+	if not current:
+		return available.size()  # last item is "(снять модуль)"
+	for i in available.size():
+		if available[i] == current:
+			return i
+	return available.size()
 
 
 func _build_module_list() -> void:
@@ -299,19 +312,15 @@ func _refresh_module_highlight() -> void:
 		idx += 1
 
 
-func _handle_pick_module_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
+func _handle_pick_module_polling() -> void:
+	if Input.is_action_just_pressed("ui_cancel"):
 		_exit_module_pick()
-		accept_event()
-	elif event.is_action_pressed("ui_accept"):
+	elif Input.is_action_just_pressed("ui_accept"):
 		_apply_selected_module()
-		accept_event()
-	elif event.is_action_pressed("ui_up"):
+	elif Input.is_action_just_pressed("ui_up"):
 		_step_module(-1)
-		accept_event()
-	elif event.is_action_pressed("ui_down"):
+	elif Input.is_action_just_pressed("ui_down"):
 		_step_module(1)
-		accept_event()
 
 
 func _step_module(delta: int) -> void:
