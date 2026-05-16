@@ -34,12 +34,199 @@ class TargetIndicator:
 		outline.append(points[0])
 		draw_polyline(outline, OUTLINE_COLOR, 2.0, true)
 
+class Minimap:
+	extends Control
+
+	const MAP_SIZE := Vector2(184.0, 184.0)
+	const MAP_MARGIN := 18.0
+	const MAP_PADDING := 18.0
+	const WORLD_PADDING := 35.0
+	const MIN_WORLD_EXTENT := 80.0
+	const BACKGROUND_COLOR := Color(0.015, 0.025, 0.055, 0.72)
+	const BORDER_COLOR := Color(0.55, 0.72, 0.95, 0.42)
+	const GRID_COLOR := Color(0.55, 0.72, 0.95, 0.13)
+	const SHIP_COLOR := Color(0.72, 0.96, 1.0, 1.0)
+	const TARGET_COLOR := Color(1.0, 0.82, 0.16, 1.0)
+	const BODY_COLOR := Color(0.34, 0.62, 1.0, 0.9)
+	const BLACK_HOLE_COLOR := Color(0.02, 0.015, 0.05, 0.96)
+	const BLACK_HOLE_RING_COLOR := Color(0.82, 0.45, 1.0, 0.92)
+	const STATION_COLOR := Color(0.95, 0.45, 1.0, 0.95)
+	const FUEL_COLOR := Color(0.25, 1.0, 0.45, 0.95)
+
+	var level: Level
+	var ship: Ship
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = MAP_SIZE
+		size = MAP_SIZE
+		set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		offset_left = -MAP_SIZE.x - MAP_MARGIN
+		offset_top = MAP_MARGIN
+		offset_right = -MAP_MARGIN
+		offset_bottom = MAP_MARGIN + MAP_SIZE.y
+
+	func setup(new_level: Level, new_ship: Ship) -> void:
+		level = new_level
+		ship = new_ship
+		visible = level != null and ship != null
+		queue_redraw()
+
+	func _process(_delta: float) -> void:
+		if visible:
+			queue_redraw()
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
+		_draw_grid()
+		draw_rect(Rect2(Vector2.ZERO, size), BORDER_COLOR, false, 1.5)
+
+		if not level or not is_instance_valid(level) or not ship or not is_instance_valid(ship):
+			return
+
+		var bounds := _calculate_world_bounds()
+		var transform := _calculate_map_transform(bounds)
+		_draw_celestial_bodies(transform)
+		_draw_stations(transform)
+		_draw_fuel_pickups(transform)
+		_draw_target(transform)
+		_draw_ship(transform)
+
+	func _draw_grid() -> void:
+		for i in range(1, 4):
+			var x := size.x * float(i) / 4.0
+			var y := size.y * float(i) / 4.0
+			draw_line(Vector2(x, 0.0), Vector2(x, size.y), GRID_COLOR, 1.0)
+			draw_line(Vector2(0.0, y), Vector2(size.x, y), GRID_COLOR, 1.0)
+
+	func _calculate_world_bounds() -> Rect2:
+		var points: Array[Vector2] = []
+		_add_node_point(points, ship)
+		_add_node_point(points, level.get_target())
+		for body in level.get_celestial_bodies():
+			_add_node_point(points, body)
+		for station in level.get_stations():
+			_add_node_point(points, station)
+		for pickup in level.get_fuel_pickups():
+			_add_node_point(points, pickup)
+
+		if points.is_empty():
+			points.append(Vector2.ZERO)
+
+		var min_point := points[0]
+		var max_point := points[0]
+		for point in points:
+			min_point.x = minf(min_point.x, point.x)
+			min_point.y = minf(min_point.y, point.y)
+			max_point.x = maxf(max_point.x, point.x)
+			max_point.y = maxf(max_point.y, point.y)
+
+		var center := (min_point + max_point) * 0.5
+		var extents := max_point - min_point
+		extents.x = maxf(extents.x + WORLD_PADDING * 2.0, MIN_WORLD_EXTENT)
+		extents.y = maxf(extents.y + WORLD_PADDING * 2.0, MIN_WORLD_EXTENT)
+		return Rect2(center - extents * 0.5, extents)
+
+	func _add_node_point(points: Array[Vector2], node: Node3D) -> void:
+		if node and is_instance_valid(node):
+			points.append(_world_to_plane(node.global_position))
+
+	func _calculate_map_transform(bounds: Rect2) -> Dictionary:
+		var drawable_size := size - Vector2(MAP_PADDING * 2.0, MAP_PADDING * 2.0)
+		var scale: float = minf(
+			drawable_size.x / maxf(bounds.size.x, 1.0),
+			drawable_size.y / maxf(bounds.size.y, 1.0)
+		)
+		var world_center := bounds.position + bounds.size * 0.5
+		return {
+			"scale": scale,
+			"world_center": world_center,
+			"screen_center": size * 0.5,
+		}
+
+	func _world_to_map(world_position: Vector3, map_transform: Dictionary) -> Vector2:
+		var plane_position := _world_to_plane(world_position)
+		var world_center: Vector2 = map_transform["world_center"]
+		var screen_center: Vector2 = map_transform["screen_center"]
+		var scale: float = map_transform["scale"]
+		return screen_center + (plane_position - world_center) * scale
+
+	func _world_to_plane(world_position: Vector3) -> Vector2:
+		return Vector2(world_position.x, world_position.z)
+
+	func _draw_celestial_bodies(map_transform: Dictionary) -> void:
+		for body in level.get_celestial_bodies():
+			if not is_instance_valid(body):
+				continue
+			var position := _world_to_map(body.global_position, map_transform)
+			var radius := 5.0
+			if body.body_data:
+				var scale: float = map_transform["scale"]
+				radius = clampf(body.body_data.radius * scale, 4.0, 18.0)
+			if body is BlackHole:
+				draw_circle(position, radius, BLACK_HOLE_COLOR)
+				draw_arc(position, radius + 2.0, 0.0, TAU, 36, BLACK_HOLE_RING_COLOR, 2.0)
+			else:
+				draw_circle(position, radius, BODY_COLOR)
+				draw_arc(position, radius + 1.0, 0.0, TAU, 30, Color(BODY_COLOR, 0.45), 1.5)
+
+	func _draw_stations(map_transform: Dictionary) -> void:
+		for station in level.get_stations():
+			if not is_instance_valid(station):
+				continue
+			var position := _world_to_map(station.global_position, map_transform)
+			var rect := Rect2(position - Vector2(4.5, 4.5), Vector2(9.0, 9.0))
+			draw_rect(rect, STATION_COLOR, false, 2.0)
+			draw_line(position + Vector2(-6.0, 0.0), position + Vector2(6.0, 0.0), STATION_COLOR, 1.5)
+			draw_line(position + Vector2(0.0, -6.0), position + Vector2(0.0, 6.0), STATION_COLOR, 1.5)
+
+	func _draw_fuel_pickups(map_transform: Dictionary) -> void:
+		for pickup in level.get_fuel_pickups():
+			if not is_instance_valid(pickup):
+				continue
+			draw_circle(_world_to_map(pickup.global_position, map_transform), 3.5, FUEL_COLOR)
+
+	func _draw_target(map_transform: Dictionary) -> void:
+		var target := level.get_target()
+		if not target or not is_instance_valid(target):
+			return
+		var position := _world_to_map(target.global_position, map_transform)
+		var points := PackedVector2Array([
+			position + Vector2(0.0, -7.0),
+			position + Vector2(7.0, 0.0),
+			position + Vector2(0.0, 7.0),
+			position + Vector2(-7.0, 0.0),
+		])
+		draw_colored_polygon(points, TARGET_COLOR)
+		points.append(points[0])
+		draw_polyline(points, Color(0.1, 0.07, 0.02, 0.85), 1.5, true)
+
+	func _draw_ship(map_transform: Dictionary) -> void:
+		var position := _world_to_map(ship.global_position, map_transform)
+		var forward_3d := -ship.global_transform.basis.z
+		var forward := Vector2(forward_3d.x, forward_3d.z)
+		if forward.length_squared() <= 0.0001:
+			forward = Vector2(0.0, -1.0)
+		forward = forward.normalized()
+		var right := Vector2(-forward.y, forward.x)
+		var points := PackedVector2Array([
+			position + forward * 10.0,
+			position - forward * 7.0 + right * 5.5,
+			position - forward * 4.0,
+			position - forward * 7.0 - right * 5.5,
+		])
+		draw_colored_polygon(points, SHIP_COLOR)
+		points.append(points[0])
+		draw_polyline(points, Color(0.02, 0.08, 0.1, 0.95), 1.5, true)
+
 const TARGET_INDICATOR_EDGE_PADDING: float = 36.0
 const TARGET_INDICATOR_DIRECTION_EPSILON: float = 0.001
 
 var _camera: Camera3D
 var _target: Target
+var _level: Level
 var _target_indicator: TargetIndicator
+var _minimap: Minimap
 var _dock_prompt: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
@@ -52,6 +239,11 @@ func _ready() -> void:
 	_target_indicator.visible = false
 	_target_indicator.z_index = 10
 	add_child(_target_indicator)
+
+	_minimap = Minimap.new()
+	_minimap.name = "Minimap"
+	_minimap.z_index = 5
+	add_child(_minimap)
 
 	_dock_prompt = Label.new()
 	_dock_prompt.name = "DockPrompt"
@@ -84,11 +276,14 @@ func hide_dock_prompt() -> void:
 		_dock_prompt.visible = false
 
 
-func setup(ship: Ship, camera: Camera3D = null, target: Target = null) -> void:
+func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Level = null) -> void:
 	_camera = camera
 	_target = target
+	_level = level
 	ship.fuel_changed.connect(_on_fuel_changed)
 	_on_fuel_changed(ship.fuel, ship.max_fuel)
+	if _minimap:
+		_minimap.setup(_level, ship)
 	_update_target_indicator()
 
 

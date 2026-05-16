@@ -96,6 +96,14 @@ func get_stations() -> Array[Station]:
 	return result
 
 
+func get_fuel_pickups() -> Array[FuelPickup]:
+	var result: Array[FuelPickup] = []
+	for child in get_children():
+		if child is FuelPickup:
+			result.append(child)
+	return result
+
+
 func _setup_debug_visualizer() -> void:
 	var ship := get_ship()
 	if not ship:

@@ -1,6 +1,7 @@
 extends Node
 
 const ShipScene = preload("res://scenes/ship.tscn")
+const FuelPickupScene = preload("res://scenes/fuel_pickup.tscn")
 const DefaultLoadout = preload("res://resources/loadouts/default.tres")
 
 
@@ -9,6 +10,7 @@ func _ready() -> void:
 	await _test_visualizer_predicts_forward_motion()
 	_test_celestial_sim_predicts_body_paths()
 	await _test_level_toggle_controls_visualizer()
+	await _test_level_reports_fuel_pickups()
 	print("All debug flight visualizer tests passed!")
 	get_tree().quit()
 
@@ -93,6 +95,22 @@ func _test_level_toggle_controls_visualizer() -> void:
 	level.toggle_debug_visuals()
 	assert(visualizer.enabled, "Debug visualizer should enable when level toggles debug visuals.")
 	print("  PASS: level toggle controls visualizer")
+
+	level.queue_free()
+	await get_tree().process_frame
+
+
+func _test_level_reports_fuel_pickups() -> void:
+	var level := Level.new()
+	var pickup := FuelPickupScene.instantiate() as FuelPickup
+	level.add_child(pickup)
+	add_child(level)
+	await get_tree().process_frame
+
+	var pickups := level.get_fuel_pickups()
+	assert(pickups.size() == 1, "Level should report one fuel pickup.")
+	assert(pickups[0] == pickup, "Level should return the fuel pickup child.")
+	print("  PASS: level reports fuel pickups")
 
 	level.queue_free()
 	await get_tree().process_frame
