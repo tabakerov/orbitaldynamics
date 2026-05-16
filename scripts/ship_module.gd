@@ -5,6 +5,7 @@ var ship: Node  # back-reference, typed Node to avoid cyclic class_name dependen
 var profile: ModuleProfile
 var active: bool = false
 var intensity: float = 0.0
+var fuel_supply_ratio: float = 1.0
 
 
 func attach(p_ship: Node, p_profile: ModuleProfile) -> void:
@@ -27,6 +28,10 @@ func physics_tick(_delta: float) -> void:
 
 func get_thrust_vector() -> Vector3:
 	return Vector3.ZERO
+
+
+func get_requested_fuel_drain(_delta: float) -> float:
+	return get_fuel_drain(_delta)
 
 
 func get_fuel_drain(_delta: float) -> float:

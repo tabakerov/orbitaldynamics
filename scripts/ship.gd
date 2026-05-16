@@ -114,8 +114,9 @@ func _physics_process(delta: float) -> void:
 	_update_gimbal(delta)
 	for module: ShipModule in _modules.values():
 		module.physics_tick(delta)
+	_prepare_fuel_flow(delta)
 	_apply_engine_forces()
-	_apply_fuel_flow(delta)
+	_apply_fuel_flow(delta, false)
 	_apply_gravity()
 	_recalculate_mass_properties()
 
@@ -190,7 +191,27 @@ func get_debug_gravity_acceleration() -> Vector3:
 	return CelestialSim.get_gravity_at(global_position)
 
 
-func _apply_fuel_flow(delta: float) -> void:
+func _prepare_fuel_flow(delta: float) -> void:
+	var requested_drain := 0.0
+	for module: ShipModule in _modules.values():
+		module.fuel_supply_ratio = 1.0
+		requested_drain += module.get_requested_fuel_drain(delta)
+
+	var drain_ratio := 0.0
+	if requested_drain > 0.0:
+		drain_ratio = minf(fuel / requested_drain, 1.0)
+	else:
+		drain_ratio = 1.0
+
+	for module: ShipModule in _modules.values():
+		if module.get_requested_fuel_drain(delta) > 0.0:
+			module.fuel_supply_ratio = drain_ratio
+
+
+func _apply_fuel_flow(delta: float, prepare: bool = true) -> void:
+	if prepare:
+		_prepare_fuel_flow(delta)
+
 	var drain := 0.0
 	for module: ShipModule in _modules.values():
 		drain += module.get_fuel_drain(delta)

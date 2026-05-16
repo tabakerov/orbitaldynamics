@@ -7,7 +7,8 @@ const DefaultLoadout = preload("res://resources/loadouts/default.tres")
 
 func _ready() -> void:
 	_test_ship_has_no_space_damping()
-	_test_ship_engines_produce_no_thrust_without_fuel()
+	await _test_ship_engines_produce_no_thrust_without_fuel()
+	_test_ship_scales_thrust_to_available_fuel()
 	_test_ship_crashes_on_any_celestial_body_contact()
 	_test_crash_explosion_spawns_particles()
 	print("All crash flow tests passed!")
@@ -48,8 +49,6 @@ func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 	Input.action_press("mount_front")
 	Input.action_press("thrust")
 	ship._update_module_inputs()
-	Input.action_release("mount_front")
-	Input.action_release("thrust")
 
 	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
 	assert(module != null, "Front engine module should exist after loadout spawn.")
@@ -65,7 +64,42 @@ func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 		module.get_fuel_drain(0.016) == 0.0,
 		"Engine should not drain fuel when fuel is empty.",
 	)
+	ship._apply_fuel_flow(0.016)
+	module._process(0.0)
+	assert(module._active_light.visible, "Engine active lamp should remain visible without fuel.")
+	assert(not module._particles.emitting, "Engine particles should stop without fuel.")
+	assert(not module._exhaust.visible, "Engine exhaust mesh should hide without fuel.")
 	print("  PASS: ship engines produce no thrust without fuel")
+
+	Input.action_release("mount_front")
+	Input.action_release("thrust")
+	ship.queue_free()
+
+
+func _test_ship_scales_thrust_to_available_fuel() -> void:
+	var ship := ShipScene.instantiate() as Ship
+	ship.loadout = DefaultLoadout
+	add_child(ship)
+	ship.fuel = 1.0
+
+	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
+	module.active = true
+	module.intensity = 1.0
+
+	var requested_drain := module.get_requested_fuel_drain(1.0)
+	ship._apply_fuel_flow(1.0)
+	var expected_ratio := 1.0 / requested_drain
+
+	assert(is_equal_approx(ship.fuel, 0.0), "Ship should spend its remaining fuel.")
+	assert(
+		is_equal_approx(module.fuel_supply_ratio, expected_ratio),
+		"Engine fuel ratio should scale down to available fuel.",
+	)
+	assert(
+		module.get_thrust_vector().length() < 100.0,
+		"Engine should not produce full thrust when only partial frame fuel is available.",
+	)
+	print("  PASS: ship scales thrust to available fuel")
 
 	ship.queue_free()
 

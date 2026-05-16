@@ -24,7 +24,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not _exhaust:
 		return
-	var has_fuel: bool = ship != null and ship.fuel > 0.0
+	var has_fuel := _has_effective_fuel_supply()
 	var thrusting: bool = active and intensity > 0.0 and has_fuel
 	_exhaust.visible = thrusting
 	_active_light.visible = active
@@ -45,20 +45,34 @@ func apply_gimbal_delta(delta: float) -> void:
 func get_thrust_vector() -> Vector3:
 	if not active or intensity <= 0.0:
 		return Vector3.ZERO
-	if not ship or ship.fuel <= 0.0:
+	if not _has_effective_fuel_supply():
 		return Vector3.ZERO
 	var ep := profile as EngineProfile
 	if not ep:
 		return Vector3.ZERO
-	return -global_transform.basis.z * ep.max_thrust * intensity
+	return -global_transform.basis.z * ep.max_thrust * intensity * fuel_supply_ratio
 
 
-func get_fuel_drain(delta: float) -> float:
+func get_requested_fuel_drain(delta: float) -> float:
 	if not active or intensity <= 0.0:
 		return 0.0
-	if not ship or ship.fuel <= 0.0:
+	if not ship:
 		return 0.0
 	var ep := profile as EngineProfile
 	if not ep:
 		return 0.0
 	return ep.fuel_consumption_rate * intensity * delta
+
+
+func get_fuel_drain(delta: float) -> float:
+	if not _has_effective_fuel_supply():
+		return 0.0
+	return get_requested_fuel_drain(delta) * fuel_supply_ratio
+
+
+func _has_effective_fuel_supply() -> bool:
+	if not ship or fuel_supply_ratio <= 0.0:
+		return false
+	if fuel_supply_ratio < 1.0:
+		return true
+	return ship.fuel > 0.0
