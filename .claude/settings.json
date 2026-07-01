@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__unreal-engine",
+      "Bash(yarn test *)",
+      "Bash(aws lambda list-functions*)",
+      "Bash(aws secretsmanager get-secret-value*)",
+      "Bash(yarn tsc *)",
+      "Bash(glab mr view *)",
+      "Bash(aws bedrock-agent list-*)",
+      "Bash(npm run typecheck)",
+      "Bash(git fetch *)",
+      "Bash(glab mr diff *)",
+      "Bash(aws bedrock list-*)",
+      "Bash(glab auth status)",
+      "Bash(aws bedrock-agent get-*)",
+      "Bash(aws route53 list-*)"
+    ]
+  }
+}
