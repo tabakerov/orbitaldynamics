@@ -1,20 +1,13 @@
-# Godot editor and generated state
-.godot/
-/android/
-export_credentials.cfg
-
-# Local workspace state
-.superpowers/
-.worktrees/
-
 # OS/editor noise
 .DS_Store
 Thumbs.db
 
-# Exported builds
-/out/
-/build/
-/builds/
-/dist/
-/exports/
-/*.zip
+# Unreal Engine — generated/derived (ue/ project)
+ue/Binaries/
+ue/DerivedDataCache/
+ue/Intermediate/
+ue/Saved/
+ue/Build/*/UnrealBuildTool/
+ue/*.xcworkspace/
+ue/.vs/
+ue/*.sln
