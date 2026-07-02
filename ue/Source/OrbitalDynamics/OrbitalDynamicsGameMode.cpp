@@ -29,3 +29,16 @@ void AOrbitalDynamicsGameMode::InitGame(const FString& MapName, const FString& O
 		GetWorld()->SpawnActor<ACameraRig>();
 	}
 }
+
+APawn* AOrbitalDynamicsGameMode::SpawnDefaultPawnAtTransform_Implementation(AController* NewPlayer,
+                                                                            const FTransform& SpawnTransform)
+{
+	for (TActorIterator<AShip> It(GetWorld()); It; ++It)
+	{
+		if (!It->GetController())
+		{
+			return *It;
+		}
+	}
+	return Super::SpawnDefaultPawnAtTransform_Implementation(NewPlayer, SpawnTransform);
+}
