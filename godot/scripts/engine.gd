@@ -73,6 +73,4 @@ func get_fuel_drain(delta: float) -> float:
 func _has_effective_fuel_supply() -> bool:
 	if not ship or fuel_supply_ratio <= 0.0:
 		return false
-	if fuel_supply_ratio < 1.0:
-		return true
 	return ship.fuel > 0.0

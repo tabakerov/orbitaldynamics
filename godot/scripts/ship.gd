@@ -2,6 +2,9 @@ class_name Ship
 extends RigidBody3D
 
 const FUEL_UNIT_MASS: float = 0.02
+## Below this the tank is considered empty: summing per-module drains leaves
+## float residue (~1e-16) that must not keep engines "supplied" forever.
+const FUEL_EPSILON: float = 0.001
 const STICK_DEADZONE: float = 0.2
 const GIMBAL_KEYBOARD_SPEED: float = 2.0
 const GIMBAL_STICK_SENSITIVITY: float = 0.10
@@ -238,8 +241,13 @@ func _apply_fuel_flow(delta: float, prepare: bool = true) -> void:
 		module.commit_fuel_intake(p * ratio)
 
 	var new_fuel := fuel_after_drain + total_intake
-	if not is_equal_approx(new_fuel, fuel):
-		fuel = new_fuel
+	if drain > 0.0 and new_fuel < FUEL_EPSILON:
+		new_fuel = 0.0
+	# Always store the new value; is_equal_approx only gates the signal,
+	# otherwise sub-epsilon residue freezes as an eternal non-zero fuel level.
+	var notify := not is_equal_approx(new_fuel, fuel)
+	fuel = new_fuel
+	if notify:
 		fuel_changed.emit(fuel, max_fuel)
 
 

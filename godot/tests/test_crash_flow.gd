@@ -9,6 +9,7 @@ func _ready() -> void:
 	_test_ship_has_no_space_damping()
 	await _test_ship_engines_produce_no_thrust_without_fuel()
 	_test_ship_scales_thrust_to_available_fuel()
+	_test_engine_effects_stop_after_multi_engine_burnout()
 	_test_ship_crashes_on_any_celestial_body_contact()
 	_test_crash_explosion_spawns_particles()
 	print("All crash flow tests passed!")
@@ -72,6 +73,45 @@ func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 	print("  PASS: ship engines produce no thrust without fuel")
 
 	Input.action_release("mount_front")
+	Input.action_release("thrust")
+	ship.queue_free()
+
+
+func _test_engine_effects_stop_after_multi_engine_burnout() -> void:
+	var ship := ShipScene.instantiate() as Ship
+	ship.loadout = DefaultLoadout
+	add_child(ship)
+	ship.fuel = 2.0
+
+	Input.action_press("mount_front")
+	Input.action_press("mount_rear")
+	Input.action_press("thrust")
+	ship._update_module_inputs()
+
+	# Burn the tank dry across several engines: summed per-module drains used
+	# to leave float residue that kept exhaust particles emitting forever.
+	var delta := 1.0 / 60.0
+	for i in 300:
+		ship._prepare_fuel_flow(delta)
+		ship._apply_fuel_flow(delta, false)
+
+	assert(
+		ship.fuel == 0.0,
+		"Fuel must reach exactly zero after burnout. Got: %s" % str(ship.fuel),
+	)
+
+	var module := ship._modules[MountSlot.Binding.REAR] as EngineModule
+	module._process(0.0)
+	assert(not module._particles.emitting, "Engine particles must stop once the tank is empty.")
+	assert(not module._exhaust.visible, "Engine exhaust must hide once the tank is empty.")
+	assert(
+		module.get_thrust_vector().length_squared() == 0.0,
+		"Engine must produce no thrust once the tank is empty.",
+	)
+	print("  PASS: engine effects stop after multi-engine burnout")
+
+	Input.action_release("mount_front")
+	Input.action_release("mount_rear")
 	Input.action_release("thrust")
 	ship.queue_free()
 
