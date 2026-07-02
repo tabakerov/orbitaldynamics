@@ -1,0 +1,88 @@
+[gd_scene format=3 uid="uid://bvg3dm6k6g441"]
+
+[ext_resource type="Script" uid="uid://4tx8ew8o0fac" path="res://scripts/level.gd" id="1_level"]
+[ext_resource type="PackedScene" path="res://scenes/black_hole.tscn" id="2_hole"]
+[ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_bodydata"]
+[ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="4_ship"]
+[ext_resource type="Resource" path="res://resources/loadouts/default.tres" id="5_loadout"]
+[ext_resource type="Script" path="res://scripts/object_spawner.gd" id="6_spawner"]
+[ext_resource type="Script" path="res://scripts/spawn_entry.gd" id="7_entry"]
+[ext_resource type="Script" path="res://scripts/score_tracker.gd" id="8_score"]
+[ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="9_fuel"]
+[ext_resource type="PackedScene" path="res://scenes/bonus_star.tscn" id="10_star"]
+[ext_resource type="PackedScene" path="res://scenes/asteroid.tscn" id="11_asteroid"]
+[ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="12_scatter"]
+
+[sub_resource type="Resource" id="hole_data"]
+script = ExtResource("3_bodydata")
+mass = 2500.0
+max_range = 1000.0
+radius = 4.0
+
+[sub_resource type="Resource" id="entry_fuel"]
+script = ExtResource("7_entry")
+scene = ExtResource("9_fuel")
+interval_jitter = 1.5
+initial_velocity = Vector3(-1.5, 0, 5)
+velocity_jitter = Vector3(0.8, 0, 1.2)
+velocity_frame = 1
+max_alive = 12
+gravity_override = 2
+
+[sub_resource type="Resource" id="entry_star"]
+script = ExtResource("7_entry")
+scene = ExtResource("10_star")
+interval = 8.0
+interval_jitter = 3.0
+initial_velocity = Vector3(-1, 0, 4.6)
+velocity_jitter = Vector3(0.6, 0, 1)
+velocity_frame = 1
+max_alive = 5
+gravity_override = 2
+
+[sub_resource type="Resource" id="entry_asteroid"]
+script = ExtResource("7_entry")
+scene = ExtResource("11_asteroid")
+interval = 2.5
+interval_jitter = 2.0
+initial_velocity = Vector3(-5, 0, 1.5)
+velocity_jitter = Vector3(1.5, 0, 1)
+velocity_frame = 1
+max_alive = 12
+gravity_override = 2
+
+[node name="LevelSurvival" type="Node3D" unique_id=1295372003]
+script = ExtResource("1_level")
+intro_message = "Не упадите в чёрную дыру!
+Собирайте топливо и бонусные звёзды, уворачивайтесь от астероидов.
+Всё, что падает в дыру, делает её больше. Чем дольше вы живы — тем больше очков."
+
+[node name="BlackHole" parent="." unique_id=758289330 instance=ExtResource("2_hole")]
+body_data = SubResource("hole_data")
+stationary = true
+
+[node name="Ship" parent="." unique_id=1026116833 instance=ExtResource("4_ship")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
+linear_velocity = Vector3(-6, 0, 0)
+loadout = ExtResource("5_loadout")
+
+[node name="ObjectSpawner" type="Node3D" parent="." unique_id=1328266842]
+script = ExtResource("6_spawner")
+entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel"), SubResource("entry_star"), SubResource("entry_asteroid")])
+disc_radius = 31.97
+ring_inner_radius = 94.61
+ring_outer_radius = 120.0
+despawn_distance = 260.0
+
+[node name="ScoreTracker" type="Node" parent="." unique_id=1932522]
+script = ExtResource("8_score")
+points_per_second = 2.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=30180286]
+transform = Transform3D(1, 0, 0, 0, 0.15315837, 0.9882017, 0, -0.9882017, 0.15315837, 0, 0.018666267, 0)
+shadow_enabled = true
+sky_mode = 1
+
+[node name="BackgroundScatter" parent="." unique_id=968130141 instance=ExtResource("12_scatter")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -45, 0)
+volume_size = Vector3(600, 50, 600)
