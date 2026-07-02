@@ -14,6 +14,7 @@ var _intro_overlay: Control
 var _intro_message_label: Label
 var _intro_continue_btn: Button
 var _crash_overlay: Control
+var _crash_score_label: Label
 var _crash_restart_btn: Button
 var _crash_menu_btn: Button
 var _completion_overlay: Control
@@ -315,6 +316,13 @@ func _setup_crash_overlay() -> void:
 	title.add_theme_font_size_override("font_size", 44)
 	panel.add_child(title)
 
+	_crash_score_label = Label.new()
+	_crash_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_crash_score_label.add_theme_font_size_override("font_size", 30)
+	_crash_score_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
+	_crash_score_label.visible = false
+	panel.add_child(_crash_score_label)
+
 	var subtitle := Label.new()
 	subtitle.text = "Перезапустить уровень или выйти в главное меню?"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -398,6 +406,10 @@ func _show_crash_overlay() -> void:
 	_hide_intro_overlay()
 	_hide_completion_overlay()
 	_hud.visible = false
+	var tracker: ScoreTracker = _current_level.get_score_tracker() if _current_level else null
+	if tracker:
+		_crash_score_label.text = "Набрано очков: %d" % tracker.get_score()
+	_crash_score_label.visible = tracker != null
 	_crash_overlay.visible = true
 	_crash_restart_btn.call_deferred("grab_focus")
 	get_tree().paused = true

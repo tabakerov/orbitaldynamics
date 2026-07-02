@@ -267,10 +267,11 @@ func _recalculate_mass_properties() -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if body is CelestialBody:
-		_crash(body)
+		crash_at(_get_crash_position(body))
 
 
-func _crash(body: CelestialBody) -> void:
+## Destroys the ship (used by celestial-body contact and hazards like asteroids).
+func crash_at(crash_position: Vector3) -> void:
 	if _crashed:
 		return
 	_crashed = true
@@ -280,7 +281,7 @@ func _crash(body: CelestialBody) -> void:
 	freeze = true
 	sleeping = true
 	set_physics_process(false)
-	crashed.emit(_get_crash_position(body))
+	crashed.emit(crash_position)
 
 
 func _stop_modules() -> void:

@@ -98,10 +98,35 @@ func get_stations() -> Array[Station]:
 
 func get_fuel_pickups() -> Array[FuelPickup]:
 	var result: Array[FuelPickup] = []
-	for child in get_children():
-		if child is FuelPickup:
-			result.append(child)
+	_collect_descendants(self, func(node: Node) -> bool: return node is FuelPickup, result)
 	return result
+
+
+## All FloatingObjects in the level, including ones nested under spawners.
+func get_floating_objects() -> Array[FloatingObject]:
+	var result: Array[FloatingObject] = []
+	_collect_descendants(self, func(node: Node) -> bool: return node is FloatingObject, result)
+	return result
+
+
+func get_spawners() -> Array[ObjectSpawner]:
+	var result: Array[ObjectSpawner] = []
+	_collect_descendants(self, func(node: Node) -> bool: return node is ObjectSpawner, result)
+	return result
+
+
+func get_score_tracker() -> ScoreTracker:
+	for child in get_children():
+		if child is ScoreTracker:
+			return child
+	return null
+
+
+func _collect_descendants(node: Node, predicate: Callable, result: Array) -> void:
+	for child in node.get_children():
+		if predicate.call(child):
+			result.append(child)
+		_collect_descendants(child, predicate, result)
 
 
 func _setup_debug_visualizer() -> void:

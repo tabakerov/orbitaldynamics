@@ -140,6 +140,14 @@ func get_body_count() -> int:
 	return _count
 
 
+## Updates a body's mass at runtime (e.g. a black hole growing by absorption).
+## Affects both inter-body attraction and the gravity field from get_gravity_at.
+func set_body_mass(index: int, new_mass: float) -> void:
+	if index < 0 or index >= _count:
+		return
+	_masses[index] = maxf(new_mass, 0.0)
+
+
 func _get_body_accelerations(positions: PackedVector3Array) -> Array[Vector3]:
 	var accels: Array[Vector3] = []
 	accels.resize(_count)

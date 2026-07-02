@@ -52,6 +52,8 @@ class Minimap:
 	const BLACK_HOLE_RING_COLOR := Color(0.82, 0.45, 1.0, 0.92)
 	const STATION_COLOR := Color(0.95, 0.45, 1.0, 0.95)
 	const FUEL_COLOR := Color(0.25, 1.0, 0.45, 0.95)
+	const STAR_COLOR := Color(1.0, 0.85, 0.25, 0.95)
+	const DEBRIS_COLOR := Color(0.62, 0.58, 0.54, 0.9)
 
 	var level: Level
 	var ship: Ship
@@ -88,7 +90,7 @@ class Minimap:
 		var transform := _calculate_map_transform(bounds)
 		_draw_celestial_bodies(transform)
 		_draw_stations(transform)
-		_draw_fuel_pickups(transform)
+		_draw_floating_objects(transform)
 		_draw_target(transform)
 		_draw_ship(transform)
 
@@ -107,8 +109,16 @@ class Minimap:
 			_add_node_point(points, body)
 		for station in level.get_stations():
 			_add_node_point(points, station)
-		for pickup in level.get_fuel_pickups():
-			_add_node_point(points, pickup)
+		for object in level.get_floating_objects():
+			# Spawned objects roam and would make the map scale jitter;
+			# only hand-placed ones (direct children) define the bounds.
+			if object.get_parent() == level:
+				_add_node_point(points, object)
+		for spawner in level.get_spawners():
+			var extent: float = spawner.get_volume_extent()
+			var center := _world_to_plane(spawner.global_position)
+			points.append(center + Vector2(extent, extent))
+			points.append(center - Vector2(extent, extent))
 
 		if points.is_empty():
 			points.append(Vector2.ZERO)
@@ -180,11 +190,20 @@ class Minimap:
 			draw_line(position + Vector2(-6.0, 0.0), position + Vector2(6.0, 0.0), STATION_COLOR, 1.5)
 			draw_line(position + Vector2(0.0, -6.0), position + Vector2(0.0, 6.0), STATION_COLOR, 1.5)
 
-	func _draw_fuel_pickups(map_transform: Dictionary) -> void:
-		for pickup in level.get_fuel_pickups():
-			if not is_instance_valid(pickup):
+	func _draw_floating_objects(map_transform: Dictionary) -> void:
+		var visible_rect := Rect2(Vector2.ZERO, size)
+		for object in level.get_floating_objects():
+			if not is_instance_valid(object):
 				continue
-			draw_circle(_world_to_map(pickup.global_position, map_transform), 3.5, FUEL_COLOR)
+			var object_position := _world_to_map(object.global_position, map_transform)
+			if not visible_rect.has_point(object_position):
+				continue
+			if object is FuelPickup:
+				draw_circle(object_position, 3.5, FUEL_COLOR)
+			elif object is BonusStar:
+				draw_circle(object_position, 3.5, STAR_COLOR)
+			else:
+				draw_circle(object_position, 2.5, DEBRIS_COLOR)
 
 	func _draw_target(map_transform: Dictionary) -> void:
 		var target := level.get_target()
@@ -228,6 +247,7 @@ var _level: Level
 var _target_indicator: TargetIndicator
 var _minimap: Minimap
 var _dock_prompt: Label
+var _score_label: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
 @onready var _fuel_label: Label = %FuelLabel
@@ -263,6 +283,22 @@ func _ready() -> void:
 	_dock_prompt.z_index = 10
 	add_child(_dock_prompt)
 
+	_score_label = Label.new()
+	_score_label.name = "ScoreLabel"
+	_score_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_score_label.offset_left = 18.0
+	_score_label.offset_top = 12.0
+	_score_label.offset_right = 340.0
+	_score_label.offset_bottom = 56.0
+	_score_label.add_theme_font_size_override("font_size", 30)
+	_score_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1.0))
+	_score_label.add_theme_color_override("font_outline_color", Color(0.08, 0.05, 0.01, 1.0))
+	_score_label.add_theme_constant_override("outline_size", 5)
+	_score_label.visible = false
+	_score_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_score_label.z_index = 10
+	add_child(_score_label)
+
 
 func show_dock_prompt(station_name: String = "станции") -> void:
 	if not _dock_prompt:
@@ -284,7 +320,21 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_on_fuel_changed(ship.fuel, ship.max_fuel)
 	if _minimap:
 		_minimap.setup(_level, ship)
+	_setup_score(_level.get_score_tracker() if _level else null)
 	_update_target_indicator()
+
+
+func _setup_score(tracker: ScoreTracker) -> void:
+	if not _score_label:
+		return
+	_score_label.visible = tracker != null
+	if tracker:
+		_on_score_changed(tracker.get_score())
+		tracker.score_changed.connect(_on_score_changed)
+
+
+func _on_score_changed(score: int) -> void:
+	_score_label.text = "Очки: %d" % score
 
 
 func _process(_delta: float) -> void:

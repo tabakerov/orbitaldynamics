@@ -11,6 +11,7 @@ func _init() -> void:
 	_test_gravity_min_range_clamp()
 	_test_two_body_orbit_bounded()
 	_test_plane_constraint()
+	_test_set_body_mass_scales_gravity()
 	print("All celestial simulation tests passed!")
 	quit()
 
@@ -155,3 +156,25 @@ func _test_plane_constraint() -> void:
 		"Velocity Y should be zeroed. Got %f" % sim.get_body_velocity(0).y,
 	)
 	print("  PASS: plane constraint enforced")
+
+
+func _test_set_body_mass_scales_gravity() -> void:
+	var sim = _make_sim()
+	sim.initialize(
+		[_make_body(1000.0)],
+		PackedVector3Array([Vector3.ZERO]),
+		PackedVector3Array([Vector3.ZERO]),
+	)
+	var before: float = sim.get_gravity_at(Vector3(10, 0, 0)).length()
+	sim.set_body_mass(0, 4000.0)
+	var after: float = sim.get_gravity_at(Vector3(10, 0, 0)).length()
+	assert(
+		absf(after / before - 4.0) < 0.01,
+		"Gravity should scale with updated mass. Ratio: %f" % (after / before),
+	)
+	sim.set_body_mass(5, 1.0)
+	assert(
+		is_equal_approx(sim.get_gravity_at(Vector3(10, 0, 0)).length(), after),
+		"Out-of-range index should be ignored.",
+	)
+	print("  PASS: set_body_mass scales gravity")

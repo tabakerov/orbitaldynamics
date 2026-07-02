@@ -2,6 +2,12 @@
 class_name BlackHole
 extends CelestialBody
 
+@export_group("Absorption")
+## Radius gained per unit of absorbed mass.
+@export var radius_growth_per_mass: float = 0.02
+## Fraction of absorbed mass added to the gravitational mass.
+@export var mass_gain_factor: float = 1.0
+
 @export_group("Lensing")
 ## Radius of the lensing effect mesh (visual only, not gravity).
 @export var lensing_radius: float = 30.0:
@@ -22,9 +28,29 @@ const PARAM_CHROMATIC_ABERRATION: String = "chromatic_aberration"
 
 
 func _ready() -> void:
+	if not Engine.is_editor_hint() and body_data:
+		# Absorption mutates radius/mass and the collision shape, which are
+		# otherwise shared between instances — make per-instance copies.
+		body_data = body_data.duplicate()
+		var collision := $CollisionShape3D as CollisionShape3D
+		collision.shape = collision.shape.duplicate()
 	super()
 	_apply_lensing_mesh_size()
 	_apply_lensing_shader_parameters()
+
+
+## Swallow the given mass: the hole's radius and gravitational pull grow.
+func absorb(absorbed_mass: float) -> void:
+	if absorbed_mass <= 0.0 or not body_data:
+		return
+	var old_radius := body_data.radius
+	body_data.radius += radius_growth_per_mass * absorbed_mass
+	body_data.mass += absorbed_mass * mass_gain_factor
+	if sim_index >= 0:
+		CelestialSim.set_body_mass(sim_index, body_data.mass)
+	if old_radius > 0.0:
+		lensing_radius *= body_data.radius / old_radius
+	_setup_visuals()
 
 
 func _setup_visuals() -> void:
