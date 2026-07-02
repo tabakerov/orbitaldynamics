@@ -458,92 +458,110 @@ void AShip::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		return;
 	}
 
-	// Actions and mappings are built in code so the project needs no input
-	// assets yet; a data-driven IMC can replace this later without code changes.
-	InputContext = NewObject<UInputMappingContext>(this);
-
-	struct FMountKeys
+	if (!InputMapping)
 	{
+		BuildFallbackInputAssets();
+	}
+
+	struct FMountAction
+	{
+		UInputAction* Action;
 		EMountBinding Binding;
-		FKey Keyboard;
-		FKey Gamepad;
 	};
-	// Same bindings as godot project.godot: W/S/A/D + Y/A/X/B face buttons.
-	const FMountKeys MountKeys[] = {
-		{ EMountBinding::Front, EKeys::W, EKeys::Gamepad_FaceButton_Top },
-		{ EMountBinding::Rear, EKeys::S, EKeys::Gamepad_FaceButton_Bottom },
-		{ EMountBinding::Left, EKeys::A, EKeys::Gamepad_FaceButton_Left },
-		{ EMountBinding::Right, EKeys::D, EKeys::Gamepad_FaceButton_Right },
+	const FMountAction MountBindings[] = {
+		{ MountFrontAction, EMountBinding::Front },
+		{ MountRearAction, EMountBinding::Rear },
+		{ MountLeftAction, EMountBinding::Left },
+		{ MountRightAction, EMountBinding::Right },
 	};
-
-	for (const FMountKeys& Entry : MountKeys)
+	for (const FMountAction& Entry : MountBindings)
 	{
-		UInputAction* Action = NewObject<UInputAction>(this);
-		Action->ValueType = EInputActionValueType::Boolean;
-		MountActions.Add(Entry.Binding, Action);
-		InputContext->MapKey(Action, Entry.Keyboard);
-		InputContext->MapKey(Action, Entry.Gamepad);
-
+		if (!Entry.Action)
+		{
+			continue;
+		}
 		const EMountBinding Binding = Entry.Binding;
-		Input->BindActionValueLambda(Action, ETriggerEvent::Started,
+		Input->BindActionValueLambda(Entry.Action, ETriggerEvent::Started,
 			[this, Binding](const FInputActionValue&) { MountPressed.Add(Binding, true); });
-		Input->BindActionValueLambda(Action, ETriggerEvent::Completed,
+		Input->BindActionValueLambda(Entry.Action, ETriggerEvent::Completed,
 			[this, Binding](const FInputActionValue&) { MountPressed.Add(Binding, false); });
 	}
 
-	ThrustAction = NewObject<UInputAction>(this);
-	ThrustAction->ValueType = EInputActionValueType::Axis1D;
-	InputContext->MapKey(ThrustAction, EKeys::SpaceBar);
-	InputContext->MapKey(ThrustAction, EKeys::Gamepad_RightTriggerAxis);
-	Input->BindActionValueLambda(ThrustAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) { CurrentThrust = Value.Get<float>(); });
-	Input->BindActionValueLambda(ThrustAction, ETriggerEvent::Completed,
-		[this](const FInputActionValue&) { CurrentThrust = 0.0f; });
-
-	// Godot: gimbal_cw = E, gimbal_ccw = Q.
-	GimbalCWAction = NewObject<UInputAction>(this);
-	GimbalCWAction->ValueType = EInputActionValueType::Boolean;
-	InputContext->MapKey(GimbalCWAction, EKeys::E);
-	Input->BindActionValueLambda(GimbalCWAction, ETriggerEvent::Started,
-		[this](const FInputActionValue&) { bGimbalCWPressed = true; });
-	Input->BindActionValueLambda(GimbalCWAction, ETriggerEvent::Completed,
-		[this](const FInputActionValue&) { bGimbalCWPressed = false; });
-
-	GimbalCCWAction = NewObject<UInputAction>(this);
-	GimbalCCWAction->ValueType = EInputActionValueType::Boolean;
-	InputContext->MapKey(GimbalCCWAction, EKeys::Q);
-	Input->BindActionValueLambda(GimbalCCWAction, ETriggerEvent::Started,
-		[this](const FInputActionValue&) { bGimbalCCWPressed = true; });
-	Input->BindActionValueLambda(GimbalCCWAction, ETriggerEvent::Completed,
-		[this](const FInputActionValue&) { bGimbalCCWPressed = false; });
-
-	GimbalStickAction = NewObject<UInputAction>(this);
-	GimbalStickAction->ValueType = EInputActionValueType::Axis2D;
-	InputContext->MapKey(GimbalStickAction, EKeys::Gamepad_Left2D);
-	Input->BindActionValueLambda(GimbalStickAction, ETriggerEvent::Triggered,
-		[this](const FInputActionValue& Value) { CurrentStick = Value.Get<FVector2D>(); });
-	Input->BindActionValueLambda(GimbalStickAction, ETriggerEvent::Completed,
-		[this](const FInputActionValue&) { CurrentStick = FVector2D::ZeroVector; });
-
-	RestartAction = NewObject<UInputAction>(this);
-	RestartAction->ValueType = EInputActionValueType::Boolean;
-	InputContext->MapKey(RestartAction, EKeys::R);
-	InputContext->MapKey(RestartAction, EKeys::Gamepad_Special_Right);
-	Input->BindAction(RestartAction, ETriggerEvent::Started, this, &AShip::HandleRestart);
-
-	DebugToggleAction = NewObject<UInputAction>(this);
-	DebugToggleAction->ValueType = EInputActionValueType::Boolean;
-	InputContext->MapKey(DebugToggleAction, EKeys::F3);
-	Input->BindAction(DebugToggleAction, ETriggerEvent::Started, this, &AShip::HandleDebugToggle);
+	if (ThrustAction)
+	{
+		Input->BindActionValueLambda(ThrustAction, ETriggerEvent::Triggered,
+			[this](const FInputActionValue& Value) { CurrentThrust = Value.Get<float>(); });
+		Input->BindActionValueLambda(ThrustAction, ETriggerEvent::Completed,
+			[this](const FInputActionValue&) { CurrentThrust = 0.0f; });
+	}
+	if (GimbalCWAction)
+	{
+		Input->BindActionValueLambda(GimbalCWAction, ETriggerEvent::Started,
+			[this](const FInputActionValue&) { bGimbalCWPressed = true; });
+		Input->BindActionValueLambda(GimbalCWAction, ETriggerEvent::Completed,
+			[this](const FInputActionValue&) { bGimbalCWPressed = false; });
+	}
+	if (GimbalCCWAction)
+	{
+		Input->BindActionValueLambda(GimbalCCWAction, ETriggerEvent::Started,
+			[this](const FInputActionValue&) { bGimbalCCWPressed = true; });
+		Input->BindActionValueLambda(GimbalCCWAction, ETriggerEvent::Completed,
+			[this](const FInputActionValue&) { bGimbalCCWPressed = false; });
+	}
+	if (GimbalStickAction)
+	{
+		Input->BindActionValueLambda(GimbalStickAction, ETriggerEvent::Triggered,
+			[this](const FInputActionValue& Value) { CurrentStick = Value.Get<FVector2D>(); });
+		Input->BindActionValueLambda(GimbalStickAction, ETriggerEvent::Completed,
+			[this](const FInputActionValue&) { CurrentStick = FVector2D::ZeroVector; });
+	}
+	if (RestartAction)
+	{
+		Input->BindAction(RestartAction, ETriggerEvent::Started, this, &AShip::HandleRestart);
+	}
+	if (DebugToggleAction)
+	{
+		Input->BindAction(DebugToggleAction, ETriggerEvent::Started, this, &AShip::HandleDebugToggle);
+	}
 
 	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(InputContext, 0);
+			Subsystem->AddMappingContext(InputMapping, 0);
 		}
 	}
+}
+
+void AShip::BuildFallbackInputAssets()
+{
+	InputMapping = NewObject<UInputMappingContext>(this);
+
+	auto MakeAction = [this](EInputActionValueType ValueType, std::initializer_list<FKey> Keys) -> UInputAction*
+	{
+		UInputAction* Action = NewObject<UInputAction>(this);
+		Action->ValueType = ValueType;
+		for (const FKey& Key : Keys)
+		{
+			InputMapping->MapKey(Action, Key);
+		}
+		return Action;
+	};
+
+	// Same bindings as godot project.godot (and the /Game/Input assets):
+	// W/S/A/D + Y/A/X/B face buttons for mounts, Space/RT thrust,
+	// E/Q gimbal, left stick, R/Start restart, F3 debug.
+	MountFrontAction = MakeAction(EInputActionValueType::Boolean, { EKeys::W, EKeys::Gamepad_FaceButton_Top });
+	MountRearAction = MakeAction(EInputActionValueType::Boolean, { EKeys::S, EKeys::Gamepad_FaceButton_Bottom });
+	MountLeftAction = MakeAction(EInputActionValueType::Boolean, { EKeys::A, EKeys::Gamepad_FaceButton_Left });
+	MountRightAction = MakeAction(EInputActionValueType::Boolean, { EKeys::D, EKeys::Gamepad_FaceButton_Right });
+	ThrustAction = MakeAction(EInputActionValueType::Axis1D, { EKeys::SpaceBar, EKeys::Gamepad_RightTriggerAxis });
+	GimbalCWAction = MakeAction(EInputActionValueType::Boolean, { EKeys::E });
+	GimbalCCWAction = MakeAction(EInputActionValueType::Boolean, { EKeys::Q });
+	GimbalStickAction = MakeAction(EInputActionValueType::Axis2D, { EKeys::Gamepad_Left2D });
+	RestartAction = MakeAction(EInputActionValueType::Boolean, { EKeys::R, EKeys::Gamepad_Special_Right });
+	DebugToggleAction = MakeAction(EInputActionValueType::Boolean, { EKeys::F3 });
 }
 
 void AShip::HandleRestart(const FInputActionValue&)

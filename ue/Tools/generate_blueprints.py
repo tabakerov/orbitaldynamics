@@ -17,6 +17,7 @@ EAL = unreal.EditorAssetLibrary
 
 BP_DIR = "/Game/Blueprints"
 UI_DIR = "/Game/UI"
+INPUT_DIR = "/Game/Input"
 
 
 def make_blueprint(name, path, parent_class, factory):
@@ -55,7 +56,76 @@ def set_defaults(bp, props):
         cdo.set_editor_property(key, value)
 
 
+def make_key(key_name):
+    key = unreal.Key()
+    key.set_editor_property("KeyName", key_name)
+    return key
+
+
+def make_input_action(name, value_type):
+    full = "%s/%s" % (INPUT_DIR, name)
+    if EAL.does_asset_exist(full):
+        action = EAL.load_asset(full)
+    else:
+        # UInputAction is a UDataAsset, so the plain data-asset factory works.
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property("DataAssetClass", unreal.InputAction)
+        action = ASSET_TOOLS.create_asset(name, INPUT_DIR, unreal.InputAction, factory)
+    action.set_editor_property("ValueType", value_type)
+    EAL.save_loaded_asset(action)
+    unreal.log("InputAction ready: %s" % full)
+    return action
+
+
+def build_input_assets():
+    """IA_*/IMC_Ship assets mirroring the Godot input map (project.godot)."""
+    bool_type = unreal.InputActionValueType.BOOLEAN
+    axis1 = unreal.InputActionValueType.AXIS1D
+    axis2 = unreal.InputActionValueType.AXIS2D
+
+    # name -> (value type, keys)
+    spec = {
+        "IA_MountFront": (bool_type, ["W", "Gamepad_FaceButton_Top"]),
+        "IA_MountRear": (bool_type, ["S", "Gamepad_FaceButton_Bottom"]),
+        "IA_MountLeft": (bool_type, ["A", "Gamepad_FaceButton_Left"]),
+        "IA_MountRight": (bool_type, ["D", "Gamepad_FaceButton_Right"]),
+        "IA_Thrust": (axis1, ["SpaceBar", "Gamepad_RightTriggerAxis"]),
+        "IA_GimbalCW": (bool_type, ["E"]),
+        "IA_GimbalCCW": (bool_type, ["Q"]),
+        "IA_GimbalStick": (axis2, ["Gamepad_Left2D"]),
+        "IA_Restart": (bool_type, ["R", "Gamepad_Special_Right"]),
+        "IA_DebugToggle": (bool_type, ["F3"]),
+    }
+
+    actions = {}
+    mappings = []
+    for name, (value_type, keys) in spec.items():
+        action = make_input_action(name, value_type)
+        actions[name] = action
+        for key_name in keys:
+            mapping = unreal.EnhancedActionKeyMapping()
+            mapping.set_editor_property("Action", action)
+            mapping.set_editor_property("Key", make_key(key_name))
+            mappings.append(mapping)
+
+    imc_path = "%s/IMC_Ship" % INPUT_DIR
+    if EAL.does_asset_exist(imc_path):
+        imc = EAL.load_asset(imc_path)
+    else:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property("DataAssetClass", unreal.InputMappingContext)
+        imc = ASSET_TOOLS.create_asset("IMC_Ship", INPUT_DIR, unreal.InputMappingContext, factory)
+    imc.set_editor_property("Mappings", mappings)
+    EAL.save_loaded_asset(imc)
+    unreal.log("InputMappingContext ready: %s" % imc_path)
+
+    actions["IMC_Ship"] = imc
+    return actions
+
+
 def main():
+    input_assets = build_input_assets()
+
     # --- Gameplay actor blueprints ---
     bps = {}
     actor_parents = {
@@ -90,6 +160,19 @@ def main():
         finalize(bps[name])
 
     # --- Wire class defaults ---
+    set_defaults(bps["BP_Ship"], {
+        "InputMapping": input_assets["IMC_Ship"],
+        "MountFrontAction": input_assets["IA_MountFront"],
+        "MountRearAction": input_assets["IA_MountRear"],
+        "MountLeftAction": input_assets["IA_MountLeft"],
+        "MountRightAction": input_assets["IA_MountRight"],
+        "ThrustAction": input_assets["IA_Thrust"],
+        "GimbalCWAction": input_assets["IA_GimbalCW"],
+        "GimbalCCWAction": input_assets["IA_GimbalCCW"],
+        "GimbalStickAction": input_assets["IA_GimbalStick"],
+        "RestartAction": input_assets["IA_Restart"],
+        "DebugToggleAction": input_assets["IA_DebugToggle"],
+    })
     set_defaults(bps["BP_LevelManager"], {
         "VisualizerClass": generated_class(bps["BP_DebugFlightVisualizer"]),
     })

@@ -58,6 +58,42 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Ship")
 	FOnShipCrashed OnCrashed;
 
+	// Enhanced Input assets; BP_Ship points these at /Game/Input/* (created by
+	// Tools/generate_blueprints.py). When unassigned, equivalent actions and
+	// mappings are built in code so an asset-less pawn still flies.
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> InputMapping;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> MountFrontAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> MountRearAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> MountLeftAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> MountRightAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> ThrustAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> GimbalCWAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> GimbalCCWAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> GimbalStickAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> RestartAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> DebugToggleAction;
+
 	float Fuel = 0.0f;
 	float MaxFuel = 0.0f;
 
@@ -126,25 +162,9 @@ private:
 	bool bGimbalCWPressed = false;
 	bool bGimbalCCWPressed = false;
 
-	// Programmatically-built Enhanced Input (no editor assets needed yet).
-	UPROPERTY()
-	TObjectPtr<UInputMappingContext> InputContext;
-
-	UPROPERTY()
-	TMap<EMountBinding, TObjectPtr<UInputAction>> MountActions;
-
-	UPROPERTY()
-	TObjectPtr<UInputAction> ThrustAction;
-	UPROPERTY()
-	TObjectPtr<UInputAction> GimbalCWAction;
-	UPROPERTY()
-	TObjectPtr<UInputAction> GimbalCCWAction;
-	UPROPERTY()
-	TObjectPtr<UInputAction> GimbalStickAction;
-	UPROPERTY()
-	TObjectPtr<UInputAction> RestartAction;
-	UPROPERTY()
-	TObjectPtr<UInputAction> DebugToggleAction;
+	// Fallback when no input assets are assigned: builds actions and a mapping
+	// context in code, mirroring the /Game/Input assets.
+	void BuildFallbackInputAssets();
 
 	float HullDryMass = 10.0f;
 	float PrevStickAngle = 0.0f;
