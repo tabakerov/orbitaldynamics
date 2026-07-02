@@ -10,6 +10,8 @@ AOrbitalDynamicsGameMode::AOrbitalDynamicsGameMode()
 {
 	DefaultPawnClass = AShip::StaticClass();
 	PlayerControllerClass = AOrbitalPlayerController::StaticClass();
+	LevelManagerClass = ALevelManager::StaticClass();
+	CameraRigClass = ACameraRig::StaticClass();
 }
 
 void AOrbitalDynamicsGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -19,14 +21,14 @@ void AOrbitalDynamicsGameMode::InitGame(const FString& MapName, const FString& O
 	// Every map needs exactly one level manager and one camera rig; spawn
 	// them for maps that don't place them explicitly.
 	TActorIterator<ALevelManager> It(GetWorld());
-	if (!It)
+	if (!It && LevelManagerClass)
 	{
-		GetWorld()->SpawnActor<ALevelManager>();
+		GetWorld()->SpawnActor<ALevelManager>(LevelManagerClass);
 	}
 	TActorIterator<ACameraRig> CameraIt(GetWorld());
-	if (!CameraIt)
+	if (!CameraIt && CameraRigClass)
 	{
-		GetWorld()->SpawnActor<ACameraRig>();
+		GetWorld()->SpawnActor<ACameraRig>(CameraRigClass);
 	}
 }
 

@@ -4,6 +4,9 @@
 #include "GameFramework/GameModeBase.h"
 #include "OrbitalDynamicsGameMode.generated.h"
 
+class ACameraRig;
+class ALevelManager;
+
 UCLASS()
 class ORBITALDYNAMICS_API AOrbitalDynamicsGameMode : public AGameModeBase
 {
@@ -11,6 +14,14 @@ class ORBITALDYNAMICS_API AOrbitalDynamicsGameMode : public AGameModeBase
 
 public:
 	AOrbitalDynamicsGameMode();
+
+	// Classes used for the per-map auto-spawn; Blueprint subclasses of the
+	// game mode point these at BP_LevelManager / BP_CameraRig.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<ALevelManager> LevelManagerClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<ACameraRig> CameraRigClass;
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 

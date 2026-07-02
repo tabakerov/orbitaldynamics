@@ -213,40 +213,55 @@ def vec(t):
     return unreal.Vector(t[0], t[1], t[2])
 
 
+def bp_class(name):
+    cls = EAL.load_blueprint_class("%s/%s" % ("/Game/Blueprints", name))
+    if cls is None:
+        raise RuntimeError("Blueprint class not found: %s (run generate_blueprints.py first)" % name)
+    return cls
+
+
 def build_level(level, assets):
     level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
     asset_path = "%s/%s" % (MAPS, level["name"])
     if EAL.does_asset_exist(asset_path):
-        EAL.delete_asset(asset_path)
-    if not level_subsystem.new_level(asset_path):
+        # Rebuild in place: load and clear all placed actors (deleting a .umap
+        # from a commandlet is unreliable).
+        if not level_subsystem.load_level(asset_path):
+            raise RuntimeError("Failed to load level %s" % asset_path)
+        for actor in actor_subsystem.get_all_level_actors():
+            if isinstance(actor, (unreal.WorldSettings, unreal.Brush)):
+                continue
+            actor_subsystem.destroy_actor(actor)
+    elif not level_subsystem.new_level(asset_path):
         raise RuntimeError("Failed to create level %s" % asset_path)
 
     rot0 = unreal.Rotator(0, 0, 0)
 
-    manager = actor_subsystem.spawn_actor_from_class(unreal.LevelManager, vec((0, 0, 0)), rot0)
+    # Maps place the Blueprint wrappers; C++ classes stay the behavior layer.
+    manager = actor_subsystem.spawn_actor_from_class(bp_class("BP_LevelManager"), vec((0, 0, 0)), rot0)
     if level["intro"]:
         manager.set_editor_property("IntroMessage", level["intro"])
 
-    ship = actor_subsystem.spawn_actor_from_class(unreal.Ship, vec(level["ship"]["pos"]), rot0)
+    ship = actor_subsystem.spawn_actor_from_class(bp_class("BP_Ship"), vec(level["ship"]["pos"]), rot0)
     ship.set_editor_property("Loadout", assets[level["ship"]["loadout"]])
     if "fuel_override" in level["ship"]:
         ship.set_editor_property("StartingFuelOverride", level["ship"]["fuel_override"])
 
-    actor_subsystem.spawn_actor_from_class(unreal.TargetZone, vec(level["target"]), rot0)
-    actor_subsystem.spawn_actor_from_class(unreal.CameraRig, vec(level["ship"]["pos"]), rot0)
+    actor_subsystem.spawn_actor_from_class(bp_class("BP_TargetZone"), vec(level["target"]), rot0)
+    actor_subsystem.spawn_actor_from_class(bp_class("BP_CameraRig"), vec(level["ship"]["pos"]), rot0)
 
     for body in level["bodies"]:
-        actor = actor_subsystem.spawn_actor_from_class(unreal.CelestialBody, vec(body["pos"]), rot0)
+        actor = actor_subsystem.spawn_actor_from_class(bp_class("BP_CelestialBody"), vec(body["pos"]), rot0)
         actor.set_editor_property("BodyData", assets[body["data"]])
         actor.set_editor_property("InitialVelocity", vec(body["vel"]))
 
     for pos in level["pickups"]:
-        actor_subsystem.spawn_actor_from_class(unreal.FuelPickup, vec(pos), rot0)
+        actor_subsystem.spawn_actor_from_class(bp_class("BP_FuelPickup"), vec(pos), rot0)
 
     for station in level["stations"]:
-        actor = actor_subsystem.spawn_actor_from_class(unreal.Station, vec(station["pos"]), rot0)
+        actor = actor_subsystem.spawn_actor_from_class(bp_class("BP_Station"), vec(station["pos"]), rot0)
         actor.set_editor_property("Profile", assets[station["profile"]])
 
     # Placeholder lighting; the real visual pass is out of scope.

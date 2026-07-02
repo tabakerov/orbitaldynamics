@@ -11,6 +11,7 @@
 ALevelManager::ALevelManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	VisualizerClass = ADebugFlightVisualizer::StaticClass();
 }
 
 void ALevelManager::BeginPlay()
@@ -78,7 +79,8 @@ void ALevelManager::TryBindShip()
 
 	ShipPtr->OnCrashed.AddDynamic(this, &ALevelManager::HandleShipCrashed);
 
-	ADebugFlightVisualizer* Viz = GetWorld()->SpawnActor<ADebugFlightVisualizer>();
+	ADebugFlightVisualizer* Viz = GetWorld()->SpawnActor<ADebugFlightVisualizer>(
+		VisualizerClass ? *VisualizerClass : ADebugFlightVisualizer::StaticClass());
 	Viz->Ship = ShipPtr;
 	Viz->CelestialBodies = CelestialBodies;
 	Viz->SetEnabled(bDebugVisualsEnabled);

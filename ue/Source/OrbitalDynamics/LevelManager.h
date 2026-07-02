@@ -45,6 +45,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Level|Debug")
 	bool bDebugVisualsEnabled = false;
 
+	// Blueprint subclasses point this at BP_DebugFlightVisualizer.
+	UPROPERTY(EditDefaultsOnly, Category = "Level|Debug")
+	TSubclassOf<ADebugFlightVisualizer> VisualizerClass;
+
 	AShip* GetShip() const { return ShipPtr.Get(); }
 
 	UPROPERTY()

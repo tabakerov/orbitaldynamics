@@ -16,6 +16,8 @@ for map_name in MAPS:
     if not level_subsystem.load_level(path):
         unreal.log_error("VERIFY %s: failed to load" % map_name)
         continue
+    class_names = sorted({a.get_class().get_name() for a in actor_subsystem.get_all_level_actors()})
+    unreal.log("VERIFY %s: classes: %s" % (map_name, ", ".join(class_names)))
     counts = []
     for cls in CLASSES:
         actors = [a for a in actor_subsystem.get_all_level_actors() if isinstance(a, cls)]

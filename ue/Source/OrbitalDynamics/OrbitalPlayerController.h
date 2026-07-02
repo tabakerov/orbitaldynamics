@@ -26,6 +26,20 @@ class ORBITALDYNAMICS_API AOrbitalPlayerController : public APlayerController
 public:
 	AOrbitalPlayerController();
 
+	// Widget classes; Blueprint subclasses of the controller point these at
+	// the WBP_* wrappers. Defaults are the C++ widget classes.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<UShipHUDWidget> HUDWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<UModalOverlayWidget> OverlayWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<ULevelSelectWidget> LevelSelectWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Classes")
+	TSubclassOf<UShipModifierScreenWidget> ModifierScreenWidgetClass;
+
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 

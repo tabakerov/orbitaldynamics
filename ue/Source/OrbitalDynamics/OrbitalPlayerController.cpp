@@ -17,6 +17,11 @@ AOrbitalPlayerController::AOrbitalPlayerController()
 {
 	// Poll menu/dock keys and manage overlays while the game is paused.
 	PrimaryActorTick.bTickEvenWhenPaused = true;
+
+	HUDWidgetClass = UShipHUDWidget::StaticClass();
+	OverlayWidgetClass = UModalOverlayWidget::StaticClass();
+	LevelSelectWidgetClass = ULevelSelectWidget::StaticClass();
+	ModifierScreenWidgetClass = UShipModifierScreenWidget::StaticClass();
 }
 
 void AOrbitalPlayerController::BeginPlay()
@@ -28,15 +33,15 @@ void AOrbitalPlayerController::BeginPlay()
 		return;
 	}
 
-	HUD = CreateWidget<UShipHUDWidget>(this, UShipHUDWidget::StaticClass());
+	HUD = CreateWidget<UShipHUDWidget>(this, HUDWidgetClass);
 	HUD->AddToViewport(0);
 	HUD->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
-	Overlay = CreateWidget<UModalOverlayWidget>(this, UModalOverlayWidget::StaticClass());
+	Overlay = CreateWidget<UModalOverlayWidget>(this, OverlayWidgetClass);
 	Overlay->AddToViewport(10);
 	Overlay->SetVisibility(ESlateVisibility::Collapsed);
 
-	LevelSelect = CreateWidget<ULevelSelectWidget>(this, ULevelSelectWidget::StaticClass());
+	LevelSelect = CreateWidget<ULevelSelectWidget>(this, LevelSelectWidgetClass);
 	LevelSelect->AddToViewport(20);
 	LevelSelect->SetVisibility(ESlateVisibility::Collapsed);
 	LevelSelect->OnLevelSelected = [this](int32 Index) { RequestLoadLevel(Index); };
@@ -44,7 +49,7 @@ void AOrbitalPlayerController::BeginPlay()
 	LevelSelect->OnQuitRequested = [this]() { RequestQuit(); };
 	LevelSelect->OnCancel = [this]() { CloseMenu(); };
 
-	ModifierScreen = CreateWidget<UShipModifierScreenWidget>(this, UShipModifierScreenWidget::StaticClass());
+	ModifierScreen = CreateWidget<UShipModifierScreenWidget>(this, ModifierScreenWidgetClass);
 	ModifierScreen->AddToViewport(30);
 	ModifierScreen->OnClosed = [this]() { HandleModifierClosed(); };
 
