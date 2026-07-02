@@ -173,6 +173,19 @@ void AShip::ApplyLoadoutChange(EMountBinding Binding, UModuleProfile* NewProfile
 	RecalculateMassProperties();
 }
 
+void AShip::ResetInputState()
+{
+	for (EMountBinding Binding : MountBinding::All)
+	{
+		MountPressed.Add(Binding, false);
+	}
+	CurrentThrust = 0.0f;
+	CurrentStick = FVector2D::ZeroVector;
+	bGimbalCWPressed = false;
+	bGimbalCCWPressed = false;
+	bStickActive = false;
+}
+
 void AShip::AddFuel(float Amount)
 {
 	Fuel = FMath::Clamp(Fuel + Amount, 0.0f, MaxFuel);

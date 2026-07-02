@@ -28,6 +28,20 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Level")
 	FOnLevelShipCrashed OnShipCrashed;
 
+	// Intro overlay settings (port of level.gd @export Intro group).
+	UPROPERTY(EditAnywhere, Category = "Level|Intro", meta = (MultiLine = true))
+	FText IntroMessage;
+
+	// 0 = wait for the continue button; > 0 = auto-continue after this many seconds.
+	UPROPERTY(EditAnywhere, Category = "Level|Intro", meta = (ClampMin = 0))
+	float IntroTimeoutSeconds = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Level|Intro")
+	bool bIntroShowContinueButton = true;
+
+	UPROPERTY(EditAnywhere, Category = "Level|Intro")
+	FText IntroContinueButtonText;
+
 	UPROPERTY(EditAnywhere, Category = "Level|Debug")
 	bool bDebugVisualsEnabled = false;
 

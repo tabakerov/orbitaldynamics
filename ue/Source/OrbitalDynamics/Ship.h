@@ -66,6 +66,10 @@ public:
 
 	void AddFuel(float Amount);
 
+	// Clears polled input state (mounts, thrust, gimbal, stick). Called when the
+	// game unpauses so release events missed by a modal UI can't leave a key stuck.
+	void ResetInputState();
+
 	bool HasCrashed() const { return bCrashed; }
 
 	// Debug getters used by the flight visualizer.
