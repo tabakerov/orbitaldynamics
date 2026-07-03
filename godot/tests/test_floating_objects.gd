@@ -16,10 +16,9 @@ func _ready() -> void:
 	_test_fuel_pickup_refuels_ship()
 	_test_black_hole_absorbs_and_grows()
 	_test_black_hole_growth_stacks_without_jumping()
-	_test_absorption_effect_orients_cone_along_velocity()
-	_test_absorption_effect_falls_back_to_radial_burst()
-	_test_absorption_effect_scales_velocity_with_absorbed_speed()
-	_test_absorption_effect_scales_particle_count_with_mass()
+	_test_absorption_flares_ring_and_decays()
+	_test_horizon_and_ring_particles_are_configured()
+	_test_horizon_and_ring_particles_rescale_with_hole_growth()
 	_test_asteroid_crashes_ship()
 	_test_star_emits_collected()
 	_test_object_burns_on_planet()
@@ -232,141 +231,150 @@ func _test_black_hole_growth_stacks_without_jumping() -> void:
 	print("  PASS: black hole growth stacks smoothly without jumping")
 
 
-func _test_absorption_effect_orients_cone_along_velocity() -> void:
+func _test_absorption_flares_ring_and_decays() -> void:
 	var hole := BlackHoleScene.instantiate() as BlackHole
 	var data := CelestialBodyData.new()
 	data.radius = 3.0
 	data.mass = 1000.0
 	hole.body_data = data
+	hole.growth_duration = 0.0
 	add_child(hole)
-	hole.global_position = Vector3(5, 0, 3)
 
-	hole.absorb(1.0, Vector3(0, 0, 6), Vector3(8, 0, 3))  # velocity along +Z
-
-	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
-	assert(particles != null, "absorb() should spawn an AbsorptionEffect particle system.")
-	assert(particles.one_shot, "Absorption effect should be one-shot.")
-	assert(particles.emitting, "Absorption effect should start emitting immediately.")
+	var ring := hole.get_node("RingParticles") as GPUParticles3D
+	var base_ratio := ring.amount_ratio
+	var base_lifetime := ring.lifetime
 	assert(
-		particles.global_position.is_equal_approx(Vector3(8, 0, 3)),
-		"Absorption effect should spawn at the contact point. Got: %s" % str(particles.global_position),
+		is_equal_approx(base_ratio, 1.0 / hole.flare_amount_multiplier),
+		"At rest the ring should emit its normal share of the flare-sized buffer. Got: %f" % base_ratio,
 	)
 
-	var material := particles.process_material as ParticleProcessMaterial
-	assert(material != null, "Absorption effect should have a ParticleProcessMaterial.")
-	# +Z velocity, tilted -90 deg about X so orbit_velocity's local XY plane
-	# lines up with the game's XZ ground plane -> local direction (0,-1,0).
+	hole.absorb(10.0)
+
 	assert(
-		material.direction.is_equal_approx(Vector3(0, -1, 0)),
-		"Cone direction should reflect the absorbed object's velocity in the tilted local frame. Got: %s"
-			% str(material.direction),
-	)
-	assert(material.spread <= 15.0, "The burst should be a narrow cone.")
-	assert(
-		material.radial_accel_min < 0.0 and material.radial_accel_max < 0.0,
-		"radial_accel should pull particles inward, toward the hole.",
+		hole.get_node_or_null("AbsorptionEffect") == null,
+		"Absorption must not spawn a separate burst effect anymore.",
 	)
 	assert(
-		material.orbit_velocity_max > 0.0,
-		"orbit_velocity should curl the burst as it's pulled in.",
+		is_equal_approx(ring.amount_ratio, 1.0),
+		"At the flare's peak the ring should emit its full particle budget. Got: %f" % ring.amount_ratio,
+	)
+	assert(
+		is_equal_approx(ring.lifetime, hole.ring_particle_lifetime * hole.flare_lifetime_multiplier),
+		"At the flare's peak ring particle lifetime should be multiplied. Got: %f" % ring.lifetime,
 	)
 
-	var mesh := particles.draw_pass_1 as QuadMesh
-	assert(mesh != null, "Absorption effect should draw with a QuadMesh.")
-	var mesh_material := mesh.material as StandardMaterial3D
-	assert(mesh_material != null, "Absorption effect mesh should have a StandardMaterial3D.")
+	hole._physics_process(hole.flare_duration * 0.5)
+	assert(
+		ring.amount_ratio > base_ratio and ring.amount_ratio < 1.0,
+		"Halfway through, the flare should be partially decayed, not snapped off. Got: %f" % ring.amount_ratio,
+	)
+
+	hole._physics_process(hole.flare_duration)
+	assert(
+		is_equal_approx(ring.amount_ratio, base_ratio),
+		"After flare_duration the ring should be back to its normal share. Got: %f" % ring.amount_ratio,
+	)
+	assert(
+		is_equal_approx(ring.lifetime, base_lifetime),
+		"After flare_duration ring particle lifetime should be back to normal. Got: %f" % ring.lifetime,
+	)
+
+	hole.queue_free()
+	print("  PASS: absorption flares the accretion ring and decays back to normal")
+
+
+func _test_horizon_and_ring_particles_are_configured() -> void:
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	var data := CelestialBodyData.new()
+	data.radius = 4.0
+	data.mass = 1000.0
+	hole.body_data = data
+	add_child(hole)
+
+	var horizon := hole.get_node_or_null("HorizonParticles") as GPUParticles3D
+	var ring := hole.get_node_or_null("RingParticles") as GPUParticles3D
+	assert(horizon != null, "BlackHole should spawn a permanent HorizonParticles system.")
+	assert(ring != null, "BlackHole should spawn a permanent RingParticles system.")
+	assert(not horizon.one_shot and horizon.emitting, "Horizon particles should emit continuously.")
+	assert(not ring.one_shot and ring.emitting, "Ring particles should emit continuously.")
+	assert(
+		ring.amount == ceili(hole.ring_particle_count * hole.flare_amount_multiplier),
+		"Ring buffer must be allocated at the flare's peak size up front. Got: %d" % ring.amount,
+	)
+
 	var lensing_material := hole._get_lensing_material()
-	assert(lensing_material != null, "Black hole should have a lensing material to compare against.")
+	var horizon_mesh_material := (horizon.draw_pass_1 as QuadMesh).material as StandardMaterial3D
+	var ring_mesh_material := (ring.draw_pass_1 as QuadMesh).material as StandardMaterial3D
 	assert(
-		mesh_material.render_priority > lensing_material.render_priority,
-		(
-			"Absorption particles must draw after (on top of) the lensing distortion plane, "
-			+ "or the burst gets painted over and is invisible. Particle priority: %d, lensing priority: %d"
-		) % [mesh_material.render_priority, lensing_material.render_priority],
+		horizon_mesh_material.render_priority > lensing_material.render_priority,
+		"Horizon particles must draw over the lensing plane or they'd be invisible.",
+	)
+	assert(
+		ring_mesh_material.render_priority > lensing_material.render_priority,
+		"Ring particles must draw over the lensing plane or they'd be invisible.",
+	)
+
+	var horizon_material := horizon.process_material as ParticleProcessMaterial
+	var ring_material := ring.process_material as ShaderMaterial
+	assert(
+		is_equal_approx(horizon_material.emission_ring_radius, data.radius * hole.horizon_radius_multiplier),
+		"Horizon particle field radius should track the hole's physical radius.",
+	)
+	var ring_outer: float = ring_material.get_shader_parameter("ring_outer_radius")
+	var ring_inner: float = ring_material.get_shader_parameter("ring_inner_radius")
+	assert(
+		is_equal_approx(ring_outer, data.radius * hole.ring_radius_multiplier),
+		"Ring outer radius should track the hole's physical radius.",
+	)
+	assert(ring_inner < ring_outer, "Ring should be a band, not a filled disc.")
+	assert(
+		ring_material.shader == hole.RingParticleShader,
+		"Ring particles should use the tangential-velocity custom particle shader.",
+	)
+	assert(
+		is_equal_approx(ring_material.get_shader_parameter("speed_min"), hole.ring_particle_speed_min)
+			and is_equal_approx(ring_material.get_shader_parameter("speed_max"), hole.ring_particle_speed_max),
+		"Ring shader speed uniforms should come from the exported speed range.",
+	)
+	assert(
+		(ring_material.get_shader_parameter("particle_color") as Color).is_equal_approx(hole.ring_color),
+		"Ring shader color uniform should come from the exported ring_color.",
 	)
 
 	hole.queue_free()
-	print("  PASS: absorption effect orients its cone along the absorbed object's velocity")
+	print("  PASS: horizon and ring particle systems are configured correctly")
 
 
-func _test_absorption_effect_falls_back_to_radial_burst() -> void:
-	var hole := BlackHoleScene.instantiate() as BlackHole
+func _test_horizon_and_ring_particles_rescale_with_hole_growth() -> void:
 	var data := CelestialBodyData.new()
 	data.radius = 3.0
 	data.mass = 1000.0
-	hole.body_data = data
-	add_child(hole)
-	hole.global_position = Vector3.ZERO
-
-	hole.absorb(1.0, Vector3.ZERO, Vector3(4, 0, 0))  # no velocity to go on
-
-	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
-	assert(particles != null, "absorb() should still spawn an effect without a velocity.")
-	var material := particles.process_material as ParticleProcessMaterial
-	assert(
-		material.direction.is_equal_approx(Vector3(1, 0, 0)),
-		"With no velocity, the burst should point outward from the hole through the contact point. Got: %s"
-			% str(material.direction),
-	)
-
-	hole.queue_free()
-	print("  PASS: absorption effect falls back to a radial burst when there's no velocity to follow")
-
-
-func _test_absorption_effect_scales_velocity_with_absorbed_speed() -> void:
 	var hole := BlackHoleScene.instantiate() as BlackHole
-	var data := CelestialBodyData.new()
-	data.radius = 3.0
-	data.mass = 1000.0
 	hole.body_data = data
+	hole.growth_duration = 0.0  # apply growth instantly
 	add_child(hole)
-	hole.global_position = Vector3.ZERO
-	hole.absorption_velocity_multiplier = 0.5
 
-	hole.absorb(1.0, Vector3(0, 0, 10), Vector3(0, 0, 3))  # speed = 10
+	var horizon_material := (hole.get_node("HorizonParticles") as GPUParticles3D).process_material as ParticleProcessMaterial
+	var ring_material := (hole.get_node("RingParticles") as GPUParticles3D).process_material as ShaderMaterial
+	var horizon_radius_before := horizon_material.emission_ring_radius
+	var ring_radius_before: float = ring_material.get_shader_parameter("ring_outer_radius")
 
-	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
-	var material := particles.process_material as ParticleProcessMaterial
-	var expected_boost := 10.0 * hole.absorption_velocity_multiplier
+	hole.absorb(50.0)
+
+	var ring_outer: float = ring_material.get_shader_parameter("ring_outer_radius")
 	assert(
-		is_equal_approx(material.initial_velocity_min, hole.absorption_initial_velocity_min + expected_boost),
-		"initial_velocity_min should shift by absorbed speed * multiplier. Got: %f" % material.initial_velocity_min,
+		is_equal_approx(horizon_material.emission_ring_radius, hole.body_data.radius * hole.horizon_radius_multiplier),
+		"Horizon particle field should grow along with the hole.",
 	)
 	assert(
-		is_equal_approx(material.initial_velocity_max, hole.absorption_initial_velocity_max + expected_boost),
-		"initial_velocity_max should shift by absorbed speed * multiplier. Got: %f" % material.initial_velocity_max,
+		is_equal_approx(ring_outer, hole.body_data.radius * hole.ring_radius_multiplier),
+		"Ring should grow along with the hole.",
 	)
+	assert(horizon_material.emission_ring_radius > horizon_radius_before, "Horizon field should have grown.")
+	assert(ring_outer > ring_radius_before, "Ring should have grown.")
 
 	hole.queue_free()
-	print("  PASS: absorption effect scales initial velocity with the absorbed object's speed")
-
-
-func _test_absorption_effect_scales_particle_count_with_mass() -> void:
-	var hole := BlackHoleScene.instantiate() as BlackHole
-	var data := CelestialBodyData.new()
-	data.radius = 3.0
-	data.mass = 1000.0
-	hole.body_data = data
-	add_child(hole)
-	hole.global_position = Vector3.ZERO
-	hole.absorption_particles_per_mass = 2.0
-
-	hole.absorb(1.0, Vector3(0, 0, 5), Vector3(0, 0, 3))
-	var light_particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
-	var light_amount := light_particles.amount
-	light_particles.free()  # not queue_free(): must be gone before the next absorb() below
-
-	hole.absorb(20.0, Vector3(0, 0, 5), Vector3(0, 0, 3))
-	var heavy_particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
-	assert(
-		heavy_particles.amount == light_amount + roundi(19.0 * hole.absorption_particles_per_mass),
-		"Heavier objects should spawn proportionally more particles. Light: %d, heavy: %d"
-			% [light_amount, heavy_particles.amount],
-	)
-	assert(heavy_particles.amount > light_amount, "Absorbing more mass should never spawn fewer particles.")
-
-	hole.queue_free()
-	print("  PASS: absorption effect scales particle count with absorbed mass")
+	print("  PASS: horizon and ring particles rescale as the hole grows")
 
 
 func _test_asteroid_crashes_ship() -> void:

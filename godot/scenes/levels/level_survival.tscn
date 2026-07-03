@@ -58,10 +58,8 @@ intro_message = "Не упадите в чёрную дыру!
 Всё, что падает в дыру, делает её больше. Чем дольше вы живы — тем больше очков."
 
 [node name="BlackHole" parent="." unique_id=758289330 instance=ExtResource("2_hole")]
-absorption_velocity_multiplier = 1.3
-absorption_orbit_velocity_min = 3.0
-absorption_orbit_velocity_max = 5.0
-absorption_color = Color(1, 1, 1, 1)
+ring_particle_count = 400
+ring_particle_lifetime = 0.1
 body_data = SubResource("hole_data")
 stationary = true
 

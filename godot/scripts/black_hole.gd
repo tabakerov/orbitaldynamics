@@ -2,6 +2,8 @@
 class_name BlackHole
 extends CelestialBody
 
+const RingParticleShader = preload("res://resources/shaders/black_hole_ring_particles.gdshader")
+
 @export_group("Absorption")
 ## Radius gained per unit of absorbed mass.
 @export var radius_growth_per_mass: float = 0.02
@@ -26,38 +28,57 @@ extends CelestialBody
 		chromatic_aberration = clampf(value, 0.0, 1.0)
 		_apply_lensing_shader_parameters()
 
-@export_group("Absorption Effect")
-## Base particles in the one-shot burst when something falls in, before
-## absorption_particles_per_mass adds more for heavier objects.
-@export_range(1, 200, 1) var absorption_particle_count: int = 40
-## Extra particles per unit of absorbed mass, added on top of
-## absorption_particle_count — bigger objects throw more debris.
-@export_range(0.0, 10.0, 0.1) var absorption_particles_per_mass: float = 1.0
-## Seconds the burst takes to fully fade out.
-@export_range(0.1, 5.0, 0.05) var absorption_particle_lifetime: float = 0.9
-## Width of the burst cone, in degrees.
-@export_range(0.0, 90.0, 0.5) var absorption_cone_spread_deg: float = 10.0
-@export var absorption_initial_velocity_min: float = 6.0
-@export var absorption_initial_velocity_max: float = 14.0
-## Multiplies the absorbed object's own speed and adds it to the initial
-## velocity range above — fast impacts throw debris harder.
-@export_range(0.0, 3.0, 0.05) var absorption_velocity_multiplier: float = 0.5
-## Negative pulls particles inward, toward the hole.
-@export var absorption_radial_accel_min: float = -22.0
-@export var absorption_radial_accel_max: float = -12.0
-## Spins the burst as it's reeled in, giving it a curling look.
-@export var absorption_orbit_velocity_min: float = 0.6
-@export var absorption_orbit_velocity_max: float = 1.4
-@export var absorption_damping_min: float = 0.5
-@export var absorption_damping_max: float = 1.5
-@export var absorption_particle_scale_min: float = 0.15
-@export var absorption_particle_scale_max: float = 0.5
-@export var absorption_color: Color = Color(0.85, 0.55, 1.0, 1.0)
+@export_group("Particle Rendering")
 ## LensingMesh (black_hole.tscn) uses render_priority=1 so its screen-space
 ## distortion always draws over the black hole's own geometry. Transparent
-## draw order is sorted by priority before distance, so this must stay
-## higher or the burst gets painted over and disappears.
-@export var absorption_render_priority: int = 2
+## draw order is sorted by priority before distance, so both particle
+## systems below (horizon, ring) must stay higher or the lensing plane
+## paints over them and they disappear.
+@export var particle_render_priority: int = 2
+
+@export_group("Absorption Flare")
+## Absorbing something briefly intensifies the accretion ring instead of
+## spawning a separate burst: the ring's emitted-particle share jumps to its
+## full budget and particle lifetime is multiplied, then both decay back
+## linearly over flare_duration seconds.
+## Peak particle count = ring_particle_count * this multiplier. The ring's
+## GPU buffer is allocated at the peak size up front, because resizing
+## GPUParticles3D.amount restarts the system and blinks every particle out.
+@export_range(1.0, 8.0, 0.1) var flare_amount_multiplier: float = 3.0
+## Ring particle lifetime is multiplied by this at the flare's peak.
+@export_range(1.0, 5.0, 0.05) var flare_lifetime_multiplier: float = 1.8
+## Seconds for the flare to fully decay back to the ring's normal look.
+@export_range(0.05, 10.0, 0.05) var flare_duration: float = 1.2
+
+@export_group("Event Horizon Particles")
+## Replaces the old flat black disc: a dense, swirling field of dark
+## particles reads as an event horizon without a hard-edged cutout.
+@export_range(1, 300, 1) var horizon_particle_count: int = 80
+@export_range(0.5, 10.0, 0.1) var horizon_particle_lifetime: float = 3.0
+## Radius of the particle field, relative to the hole's physical radius.
+@export_range(0.3, 1.5, 0.05) var horizon_radius_multiplier: float = 0.9
+@export var horizon_particle_scale_min: float = 0.3
+@export var horizon_particle_scale_max: float = 0.8
+@export var horizon_orbit_velocity_min: float = 0.4
+@export var horizon_orbit_velocity_max: float = 1.0
+@export var horizon_color: Color = Color(0.03, 0.02, 0.05, 0.92)
+
+@export_group("Accretion Ring Particles")
+## Replaces the old static orange ring glow with fast ember streaks: each
+## particle spawns at a random point on the ring moving tangent to it, and
+## a short lifetime keeps it a brief streak instead of a full slow circle.
+@export_range(1, 400, 1) var ring_particle_count: int = 140
+@export_range(0.05, 3.0, 0.05) var ring_particle_lifetime: float = 0.6
+## Ring radius, relative to the hole's physical radius.
+@export_range(1.0, 4.0, 0.05) var ring_radius_multiplier: float = 1.6
+## Ring band thickness, relative to the hole's physical radius.
+@export_range(0.02, 1.0, 0.02) var ring_thickness_multiplier: float = 0.35
+@export var ring_particle_scale_min: float = 0.12
+@export var ring_particle_scale_max: float = 0.35
+## Tangential speed range, in world units/second.
+@export var ring_particle_speed_min: float = 15.0
+@export var ring_particle_speed_max: float = 28.0
+@export var ring_color: Color = Color(1.0, 0.45, 0.1, 1.0)
 
 const PARAM_DISTORTION_FALLOFF_START: String = "distortion_falloff_start"
 const PARAM_CHROMATIC_ABERRATION: String = "chromatic_aberration"
@@ -67,6 +88,9 @@ var _growth_start_mass: float = 0.0
 var _growth_target_radius: float = 0.0
 var _growth_target_mass: float = 0.0
 var _growth_elapsed: float = 0.0
+var _flare_strength: float = 0.0
+var _horizon_particles: GPUParticles3D
+var _ring_particles: GPUParticles3D
 
 
 func _ready() -> void:
@@ -85,11 +109,16 @@ func _ready() -> void:
 	super()
 	_apply_lensing_mesh_size()
 	_apply_lensing_shader_parameters()
+	_setup_horizon_particles()
+	_setup_ring_particles()
 
 
 func _physics_process(delta: float) -> void:
 	super(delta)
-	if Engine.is_editor_hint() or _growth_elapsed >= growth_duration:
+	if Engine.is_editor_hint():
+		return
+	_update_ring_flare(delta)
+	if _growth_elapsed >= growth_duration:
 		return
 	_growth_elapsed = minf(_growth_elapsed + delta, growth_duration)
 	var t := 1.0 if growth_duration <= 0.0 else _growth_elapsed / growth_duration
@@ -97,10 +126,9 @@ func _physics_process(delta: float) -> void:
 
 
 ## Swallow the given mass: the hole's radius and gravitational pull grow,
-## smoothly, over growth_duration seconds (see _physics_process).
-## absorbed_velocity/absorbed_position (world space) drive the absorption
-## particle burst, if given — see _spawn_absorption_effect.
-func absorb(absorbed_mass: float, absorbed_velocity: Vector3 = Vector3.ZERO, absorbed_position: Vector3 = Vector3.ZERO) -> void:
+## smoothly, over growth_duration seconds (see _physics_process), and the
+## accretion ring flares up briefly (see _trigger_ring_flare).
+func absorb(absorbed_mass: float) -> void:
 	if absorbed_mass <= 0.0 or not body_data:
 		return
 	_growth_start_radius = body_data.radius
@@ -112,7 +140,7 @@ func absorb(absorbed_mass: float, absorbed_velocity: Vector3 = Vector3.ZERO, abs
 		_growth_elapsed = growth_duration
 		_apply_growth(_growth_target_radius, _growth_target_mass)
 	if not Engine.is_editor_hint():
-		_spawn_absorption_effect(absorbed_velocity, absorbed_position, absorbed_mass)
+		_trigger_ring_flare()
 
 
 func _apply_growth(new_radius: float, new_mass: float) -> void:
@@ -126,99 +154,173 @@ func _apply_growth(new_radius: float, new_mass: float) -> void:
 	_setup_visuals()
 
 
-## Bursts debris from world_position in a narrow cone along velocity (the
-## absorbed object keeps its own momentum at first), then reels it back in:
-## a negative radial_accel pulls particles toward this node's local origin
-## and orbit_velocity spins them, so the burst curls into the hole like it's
-## being caught by its gravity.
-func _spawn_absorption_effect(velocity: Vector3, world_position: Vector3, absorbed_mass: float) -> void:
-	var direction := velocity
-	direction.y = 0.0
-	var speed := direction.length()
-	if direction.length_squared() < 0.0001:
-		# No usable velocity (e.g. a merged-away object at rest): fall back
-		# to bursting straight out from the hole through the contact point.
-		direction = world_position - global_position
-		direction.y = 0.0
-		if direction.length_squared() < 0.0001:
-			direction = Vector3.FORWARD
-	direction = direction.normalized()
+## Kick the accretion ring to full intensity; _update_ring_flare decays it.
+func _trigger_ring_flare() -> void:
+	_flare_strength = 1.0
+	_apply_ring_flare()
 
+
+func _update_ring_flare(delta: float) -> void:
+	if _flare_strength <= 0.0:
+		return
+	_flare_strength = maxf(_flare_strength - delta / maxf(flare_duration, 0.001), 0.0)
+	_apply_ring_flare()
+
+
+## Intensity is driven through amount_ratio, never amount: resizing
+## GPUParticles3D.amount reallocates the buffer and restarts the system,
+## blinking every live particle out. Lifetime can be set freely.
+func _apply_ring_flare() -> void:
+	if not _ring_particles:
+		return
+	var base_ratio := 1.0 / flare_amount_multiplier
+	_ring_particles.amount_ratio = lerpf(base_ratio, 1.0, _flare_strength)
+	_ring_particles.lifetime = ring_particle_lifetime * lerpf(1.0, flare_lifetime_multiplier, _flare_strength)
+
+
+## Continuous swirling disc of dark particles standing in for the old flat
+## black event-horizon disc. Ring-shaped emission with inner_radius=0 fills
+## the whole disc; orbit_velocity keeps it visibly churning instead of static.
+func _setup_horizon_particles() -> void:
+	if not body_data or _horizon_particles:
+		return
 	var particles := GPUParticles3D.new()
-	particles.name = "AbsorptionEffect"
+	particles.name = "HorizonParticles"
 	particles.process_mode = Node.PROCESS_MODE_ALWAYS
-	particles.one_shot = true
-	particles.amount = clampi(
-		roundi(absorption_particle_count + absorbed_mass * absorption_particles_per_mass), 1, 400
-	)
-	particles.lifetime = absorption_particle_lifetime
-	particles.explosiveness = 0.85
-	particles.randomness = 0.3
-	particles.local_coords = true
-	particles.visibility_aabb = AABB(Vector3(-30, -30, -30), Vector3(60, 60, 60))
-	particles.draw_pass_1 = _build_absorption_mesh()
-
-	add_child(particles)
-	particles.position = to_local(world_position)
-	# orbit_velocity spins particles in the LOCAL XY plane, but the game
-	# lives in the XZ plane — tilt the emitter -90° around X so the two
-	# line up, then convert direction into the emitter's (now tilted) local
-	# space via its own global basis, not just this node's.
-	particles.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
-	var local_direction := particles.global_transform.basis.inverse() * direction
-	particles.process_material = _build_absorption_material(local_direction, speed)
-
-	particles.restart()
 	particles.emitting = true
-	_free_absorption_effect(particles)
+	particles.amount = horizon_particle_count
+	particles.lifetime = horizon_particle_lifetime
+	particles.preprocess = horizon_particle_lifetime
+	particles.randomness = 0.4
+	particles.local_coords = true
+	particles.draw_pass_1 = _build_horizon_mesh()
+	# orbit_velocity spins particles in the LOCAL XY plane; tilt -90° around X
+	# so that plane lines up with the game's XZ ground plane (see the
+	# absorption burst above for the same trick).
+	particles.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	particles.process_material = _build_horizon_material()
+	add_child(particles)
+	_horizon_particles = particles
+	_apply_horizon_particle_size()
 
 
-func _build_absorption_material(local_direction: Vector3, absorbed_speed: float) -> ParticleProcessMaterial:
+## Continuous ring of glowing ember particles standing in for the old
+## static orange accretion-ring glow.
+func _setup_ring_particles() -> void:
+	if not body_data or _ring_particles:
+		return
+	var particles := GPUParticles3D.new()
+	particles.name = "RingParticles"
+	particles.process_mode = Node.PROCESS_MODE_ALWAYS
+	particles.emitting = true
+	# Buffer sized for the absorption flare's peak; amount_ratio scales the
+	# actually-emitted share down to ring_particle_count in the normal state
+	# (see _apply_ring_flare for why amount itself must never change).
+	particles.amount = maxi(ceili(ring_particle_count * flare_amount_multiplier), 1)
+	particles.amount_ratio = 1.0 / flare_amount_multiplier
+	particles.lifetime = ring_particle_lifetime
+	particles.preprocess = ring_particle_lifetime
+	particles.randomness = 0.9
+	particles.local_coords = true
+	particles.draw_pass_1 = _build_ring_mesh()
+	particles.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
+	particles.process_material = _build_ring_material()
+	add_child(particles)
+	_ring_particles = particles
+	_apply_ring_particle_size()
+
+
+func _build_horizon_material() -> ParticleProcessMaterial:
 	var material := ParticleProcessMaterial.new()
-	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_POINT
-	material.direction = local_direction
-	material.spread = absorption_cone_spread_deg
-	var speed_boost := absorbed_speed * absorption_velocity_multiplier
-	material.initial_velocity_min = absorption_initial_velocity_min + speed_boost
-	material.initial_velocity_max = absorption_initial_velocity_max + speed_boost
+	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
+	material.emission_ring_axis = Vector3(0.0, 0.0, 1.0)
+	material.emission_ring_height = 0.0
+	material.emission_ring_inner_radius = 0.0
+	material.initial_velocity_min = 0.0
+	material.initial_velocity_max = 0.0
 	material.gravity = Vector3.ZERO
-	# Negative radial_accel pulls inward, toward this emitter's local origin
-	# (the hole itself, since particles are parented here) — orbit_velocity
-	# adds the spin, so the two together curl the burst into a spiral.
-	material.radial_accel_min = absorption_radial_accel_min
-	material.radial_accel_max = absorption_radial_accel_max
-	material.orbit_velocity_min = absorption_orbit_velocity_min
-	material.orbit_velocity_max = absorption_orbit_velocity_max
-	material.damping_min = absorption_damping_min
-	material.damping_max = absorption_damping_max
-	material.scale_min = absorption_particle_scale_min
-	material.scale_max = absorption_particle_scale_max
-	material.color = absorption_color
+	material.orbit_velocity_min = horizon_orbit_velocity_min
+	material.orbit_velocity_max = horizon_orbit_velocity_max
+	material.scale_min = horizon_particle_scale_min
+	material.scale_max = horizon_particle_scale_max
+	material.color = horizon_color
 	return material
 
 
-func _build_absorption_mesh() -> QuadMesh:
+func _build_horizon_mesh() -> QuadMesh:
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.vertex_color_use_as_albedo = true
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	# White base albedo: vertex_color_use_as_albedo multiplies this by the
-	# per-particle color (absorption_color, set on the process material), so
-	# absorption_color alone controls the visible tint.
 	material.albedo_color = Color(1.0, 1.0, 1.0, 1.0)
-	material.render_priority = absorption_render_priority
+	material.render_priority = particle_render_priority
 
 	var mesh := QuadMesh.new()
 	mesh.material = material
-	mesh.size = Vector2(0.15, 0.15)
+	mesh.size = Vector2(0.4, 0.4)
 	return mesh
 
 
-func _free_absorption_effect(particles: GPUParticles3D) -> void:
-	await particles.get_tree().create_timer(particles.lifetime + 0.3, true).timeout
-	if is_instance_valid(particles):
-		particles.queue_free()
+## Custom particle shader instead of ParticleProcessMaterial: each particle
+## spawns on the ring with velocity tangent to it there (see
+## black_hole_ring_particles.gdshader) — actual radii/speed/scale are pushed
+## in by _apply_ring_particle_size(), called once here and again on growth.
+func _build_ring_material() -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = RingParticleShader
+	material.set_shader_parameter("speed_min", ring_particle_speed_min)
+	material.set_shader_parameter("speed_max", ring_particle_speed_max)
+	material.set_shader_parameter("scale_min", ring_particle_scale_min)
+	material.set_shader_parameter("scale_max", ring_particle_scale_max)
+	material.set_shader_parameter("particle_color", ring_color)
+	return material
+
+
+func _build_ring_mesh() -> QuadMesh:
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	# Additive: bright embers glow instead of just tinting the background.
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.albedo_color = Color(1.0, 1.0, 1.0, 1.0)
+	material.render_priority = particle_render_priority
+
+	var mesh := QuadMesh.new()
+	mesh.material = material
+	mesh.size = Vector2(0.3, 0.3)
+	return mesh
+
+
+func _apply_horizon_particle_size() -> void:
+	if not _horizon_particles or not body_data:
+		return
+	var material := _horizon_particles.process_material as ParticleProcessMaterial
+	if not material:
+		return
+	var radius := maxf(body_data.radius * horizon_radius_multiplier, 0.01)
+	material.emission_ring_radius = radius
+	_horizon_particles.visibility_aabb = _particle_visibility_aabb(radius)
+
+
+func _apply_ring_particle_size() -> void:
+	if not _ring_particles or not body_data:
+		return
+	var material := _ring_particles.process_material as ShaderMaterial
+	if not material:
+		return
+	var outer := maxf(body_data.radius * ring_radius_multiplier, 0.01)
+	var thickness := clampf(body_data.radius * ring_thickness_multiplier, 0.0, outer)
+	material.set_shader_parameter("ring_outer_radius", outer)
+	material.set_shader_parameter("ring_inner_radius", maxf(outer - thickness, 0.0))
+	_ring_particles.visibility_aabb = _particle_visibility_aabb(outer)
+
+
+func _particle_visibility_aabb(radius: float) -> AABB:
+	var half := maxf(radius * 2.0 + 10.0, 30.0)
+	return AABB(Vector3(-half, -half, -half), Vector3(half * 2.0, half * 2.0, half * 2.0))
 
 
 func _setup_visuals() -> void:
@@ -230,6 +332,8 @@ func _setup_visuals() -> void:
 	# Scale lensing plane to cover distortion area
 	_apply_lensing_mesh_size()
 	_apply_lensing_shader_parameters()
+	_apply_horizon_particle_size()
+	_apply_ring_particle_size()
 
 
 func _apply_lensing_mesh_size() -> void:

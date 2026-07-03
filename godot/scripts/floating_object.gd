@@ -100,7 +100,7 @@ func _handle_contact(body: Node) -> void:
 	if is_queued_for_deletion() or not is_inside_tree() or not is_instance_valid(body):
 		return
 	if body is BlackHole:
-		body.absorb(mass, velocity, global_position)
+		body.absorb(mass)
 		queue_free()
 	elif body is CelestialBody:
 		_on_celestial_contact(body)
