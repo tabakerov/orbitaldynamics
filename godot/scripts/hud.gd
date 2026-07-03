@@ -248,6 +248,7 @@ var _target_indicator: TargetIndicator
 var _minimap: Minimap
 var _dock_prompt: Label
 var _score_label: Label
+var _cheat_label: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
 @onready var _fuel_label: Label = %FuelLabel
@@ -299,6 +300,25 @@ func _ready() -> void:
 	_score_label.z_index = 10
 	add_child(_score_label)
 
+	_cheat_label = Label.new()
+	_cheat_label.name = "CheatLabel"
+	_cheat_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_cheat_label.offset_left = -220.0
+	_cheat_label.offset_top = 12.0
+	_cheat_label.offset_right = 220.0
+	_cheat_label.offset_bottom = 46.0
+	_cheat_label.text = "ЧИТ-РЕЖИМ: НЕУЯЗВИМОСТЬ + ТОПЛИВО"
+	_cheat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cheat_label.add_theme_font_size_override("font_size", 18)
+	_cheat_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35, 1.0))
+	_cheat_label.add_theme_color_override("font_outline_color", Color(0.08, 0.01, 0.01, 1.0))
+	_cheat_label.add_theme_constant_override("outline_size", 4)
+	_cheat_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cheat_label.z_index = 10
+	_cheat_label.visible = Cheats.enabled
+	add_child(_cheat_label)
+	Cheats.changed.connect(_on_cheats_changed)
+
 
 func show_dock_prompt(station_name: String = "станции") -> void:
 	if not _dock_prompt:
@@ -335,6 +355,10 @@ func _setup_score(tracker: ScoreTracker) -> void:
 
 func _on_score_changed(score: int) -> void:
 	_score_label.text = "Очки: %d" % score
+
+
+func _on_cheats_changed(cheats_enabled: bool) -> void:
+	_cheat_label.visible = cheats_enabled
 
 
 func _process(_delta: float) -> void:

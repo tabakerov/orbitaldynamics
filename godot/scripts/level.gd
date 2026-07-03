@@ -24,8 +24,13 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if event.keycode == KEY_F3:
 		toggle_debug_visuals()
+		get_viewport().set_input_as_handled()
+	elif event.keycode == KEY_F4:
+		Cheats.toggle()
 		get_viewport().set_input_as_handled()
 
 

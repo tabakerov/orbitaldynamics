@@ -200,6 +200,11 @@ func _prepare_fuel_flow(delta: float) -> void:
 		module.fuel_supply_ratio = 1.0
 		requested_drain += module.get_requested_fuel_drain(delta)
 
+	if Cheats.enabled:
+		# Full supply always; skip rationing so a tank that reads 0 this frame
+		# (before _apply_fuel_flow pegs it back to max) doesn't cut thrust.
+		return
+
 	var drain_ratio := 0.0
 	if requested_drain > 0.0:
 		drain_ratio = minf(fuel / requested_drain, 1.0)
@@ -243,6 +248,8 @@ func _apply_fuel_flow(delta: float, prepare: bool = true) -> void:
 	var new_fuel := fuel_after_drain + total_intake
 	if drain > 0.0 and new_fuel < FUEL_EPSILON:
 		new_fuel = 0.0
+	if Cheats.enabled:
+		new_fuel = max_fuel
 	# Always store the new value; is_equal_approx only gates the signal,
 	# otherwise sub-epsilon residue freezes as an eternal non-zero fuel level.
 	var notify := not is_equal_approx(new_fuel, fuel)
@@ -280,7 +287,7 @@ func _on_body_entered(body: Node) -> void:
 
 ## Destroys the ship (used by celestial-body contact and hazards like asteroids).
 func crash_at(crash_position: Vector3) -> void:
-	if _crashed:
+	if _crashed or Cheats.enabled:
 		return
 	_crashed = true
 	_stop_modules()
