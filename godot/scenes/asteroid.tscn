@@ -1,13 +1,12 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://basih44aaq8mr"]
 
-[ext_resource type="Script" path="res://scripts/asteroid.gd" id="1"]
+[ext_resource type="Script" uid="uid://c1pl63ip2at3v" path="res://scripts/asteroid.gd" id="1"]
 
 [sub_resource type="SphereShape3D" id="collision_shape"]
 radius = 0.9
 
 [sub_resource type="StandardMaterial3D" id="rock_material"]
 albedo_color = Color(0.42, 0.38, 0.34, 1)
-roughness = 1.0
 
 [sub_resource type="SphereMesh" id="rock_mesh"]
 material = SubResource("rock_material")
@@ -16,14 +15,14 @@ height = 1.6
 radial_segments = 6
 rings = 3
 
-[node name="Asteroid" type="Area3D"]
-monitoring = true
+[node name="Asteroid" type="Area3D" unique_id=384094342]
 script = ExtResource("1")
+merge_speed_threshold = 5.0
 mass = 8.0
 attracts_others = true
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=485723533]
 shape = SubResource("collision_shape")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=540156869]
 mesh = SubResource("rock_mesh")
