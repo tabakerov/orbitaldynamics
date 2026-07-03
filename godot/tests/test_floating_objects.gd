@@ -15,6 +15,7 @@ func _ready() -> void:
 	_test_despawn_beyond_distance()
 	_test_fuel_pickup_refuels_ship()
 	_test_black_hole_absorbs_and_grows()
+	_test_black_hole_growth_stacks_without_jumping()
 	_test_asteroid_crashes_ship()
 	_test_star_emits_collected()
 	_test_object_burns_on_planet()
@@ -132,6 +133,7 @@ func _test_black_hole_absorbs_and_grows() -> void:
 	hole.body_data = shared_data
 	hole.radius_growth_per_mass = 0.02
 	hole.mass_gain_factor = 1.0
+	hole.growth_duration = 0.5
 	add_child(hole)
 	hole.sim_index = 0
 
@@ -142,12 +144,28 @@ func _test_black_hole_absorbs_and_grows() -> void:
 
 	assert(object.is_queued_for_deletion(), "Object should vanish into the black hole.")
 	assert(
+		is_equal_approx(hole.body_data.radius, 3.0),
+		"Growth must not apply instantly — it should ramp over growth_duration.",
+	)
+
+	hole._physics_process(0.25)
+	assert(
+		absf(hole.body_data.radius - 3.1) < 0.001,
+		"Halfway through growth_duration, radius should be halfway grown. Got: %f" % hole.body_data.radius,
+	)
+	assert(
+		absf(hole.body_data.mass - 1005.0) < 0.001,
+		"Halfway through growth_duration, mass should be halfway grown. Got: %f" % hole.body_data.mass,
+	)
+
+	hole._physics_process(0.25)
+	assert(
 		absf(hole.body_data.radius - 3.2) < 0.001,
-		"Radius should grow by growth * mass. Got: %f" % hole.body_data.radius,
+		"Radius should fully grow by growth * mass once growth_duration elapses. Got: %f" % hole.body_data.radius,
 	)
 	assert(
 		absf(hole.body_data.mass - 1010.0) < 0.001,
-		"Hole mass should grow by absorbed mass. Got: %f" % hole.body_data.mass,
+		"Hole mass should fully grow by absorbed mass once growth_duration elapses. Got: %f" % hole.body_data.mass,
 	)
 	var gravity: float = CelestialSim.get_gravity_at(Vector3(10, 0, 0)).length()
 	assert(
@@ -166,7 +184,46 @@ func _test_black_hole_absorbs_and_grows() -> void:
 	CelestialSim.clear()
 	hole.sim_index = -1
 	hole.queue_free()
-	print("  PASS: black hole absorbs mass and grows")
+	print("  PASS: black hole absorbs mass and grows smoothly over growth_duration")
+
+
+func _test_black_hole_growth_stacks_without_jumping() -> void:
+	var data := CelestialBodyData.new()
+	data.mass = 500.0
+	data.radius = 2.0
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	hole.body_data = data
+	hole.radius_growth_per_mass = 0.1
+	hole.mass_gain_factor = 1.0
+	hole.growth_duration = 1.0
+	add_child(hole)
+
+	hole.absorb(1.0)  # target: radius 2.1, mass 501.0
+	hole._physics_process(0.5)  # halfway: radius 2.05, mass 500.5
+	assert(
+		absf(hole.body_data.radius - 2.05) < 0.001,
+		"Halfway through the first ramp. Got: %f" % hole.body_data.radius,
+	)
+
+	# A second absorption mid-ramp must retarget from the CURRENT (partially
+	# grown) value — not snap back, and not jump ahead to the old target.
+	hole.absorb(1.0)  # new target: 2.1 + 0.1 = 2.2, mass 501 + 1 = 502
+	assert(
+		is_equal_approx(hole.body_data.radius, 2.05),
+		"A new absorption must not change the current value instantly. Got: %f" % hole.body_data.radius,
+	)
+
+	hole._physics_process(1.0)  # the new ramp fully elapses
+	assert(
+		absf(hole.body_data.radius - 2.2) < 0.001,
+		"After the second ramp completes, radius should reflect both absorptions. Got: %f" % hole.body_data.radius,
+	)
+	assert(
+		absf(hole.body_data.mass - 502.0) < 0.001,
+		"After the second ramp completes, mass should reflect both absorptions. Got: %f" % hole.body_data.mass,
+	)
+	hole.queue_free()
+	print("  PASS: black hole growth stacks smoothly without jumping")
 
 
 func _test_asteroid_crashes_ship() -> void:

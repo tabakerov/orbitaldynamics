@@ -7,6 +7,9 @@ extends CelestialBody
 @export var radius_growth_per_mass: float = 0.02
 ## Fraction of absorbed mass added to the gravitational mass.
 @export var mass_gain_factor: float = 1.0
+## Seconds to fully apply an absorption instead of growing instantly.
+## New absorptions mid-ramp extend the target smoothly (no jump/restart).
+@export var growth_duration: float = 1.5
 
 @export_group("Lensing")
 ## Radius of the lensing effect mesh (visual only, not gravity).
@@ -26,6 +29,12 @@ extends CelestialBody
 const PARAM_DISTORTION_FALLOFF_START: String = "distortion_falloff_start"
 const PARAM_CHROMATIC_ABERRATION: String = "chromatic_aberration"
 
+var _growth_start_radius: float = 0.0
+var _growth_start_mass: float = 0.0
+var _growth_target_radius: float = 0.0
+var _growth_target_mass: float = 0.0
+var _growth_elapsed: float = 0.0
+
 
 func _ready() -> void:
 	if not Engine.is_editor_hint() and body_data:
@@ -34,18 +43,45 @@ func _ready() -> void:
 		body_data = body_data.duplicate()
 		var collision := $CollisionShape3D as CollisionShape3D
 		collision.shape = collision.shape.duplicate()
+	if body_data:
+		_growth_start_radius = body_data.radius
+		_growth_start_mass = body_data.mass
+		_growth_target_radius = body_data.radius
+		_growth_target_mass = body_data.mass
+		_growth_elapsed = growth_duration
 	super()
 	_apply_lensing_mesh_size()
 	_apply_lensing_shader_parameters()
 
 
-## Swallow the given mass: the hole's radius and gravitational pull grow.
+func _physics_process(delta: float) -> void:
+	super(delta)
+	if Engine.is_editor_hint() or _growth_elapsed >= growth_duration:
+		return
+	_growth_elapsed = minf(_growth_elapsed + delta, growth_duration)
+	var t := 1.0 if growth_duration <= 0.0 else _growth_elapsed / growth_duration
+	_apply_growth(lerpf(_growth_start_radius, _growth_target_radius, t), lerpf(_growth_start_mass, _growth_target_mass, t))
+
+
+## Swallow the given mass: the hole's radius and gravitational pull grow,
+## smoothly, over growth_duration seconds (see _physics_process).
 func absorb(absorbed_mass: float) -> void:
 	if absorbed_mass <= 0.0 or not body_data:
 		return
+	_growth_start_radius = body_data.radius
+	_growth_start_mass = body_data.mass
+	_growth_target_radius += radius_growth_per_mass * absorbed_mass
+	_growth_target_mass += mass_gain_factor * absorbed_mass
+	_growth_elapsed = 0.0
+	if growth_duration <= 0.0:
+		_growth_elapsed = growth_duration
+		_apply_growth(_growth_target_radius, _growth_target_mass)
+
+
+func _apply_growth(new_radius: float, new_mass: float) -> void:
 	var old_radius := body_data.radius
-	body_data.radius += radius_growth_per_mass * absorbed_mass
-	body_data.mass += absorbed_mass * mass_gain_factor
+	body_data.radius = new_radius
+	body_data.mass = new_mass
 	if sim_index >= 0:
 		CelestialSim.set_body_mass(sim_index, body_data.mass)
 	if old_radius > 0.0:
