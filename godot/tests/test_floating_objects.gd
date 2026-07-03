@@ -16,6 +16,10 @@ func _ready() -> void:
 	_test_fuel_pickup_refuels_ship()
 	_test_black_hole_absorbs_and_grows()
 	_test_black_hole_growth_stacks_without_jumping()
+	_test_absorption_effect_orients_cone_along_velocity()
+	_test_absorption_effect_falls_back_to_radial_burst()
+	_test_absorption_effect_scales_velocity_with_absorbed_speed()
+	_test_absorption_effect_scales_particle_count_with_mass()
 	_test_asteroid_crashes_ship()
 	_test_star_emits_collected()
 	_test_object_burns_on_planet()
@@ -226,6 +230,143 @@ func _test_black_hole_growth_stacks_without_jumping() -> void:
 	)
 	hole.queue_free()
 	print("  PASS: black hole growth stacks smoothly without jumping")
+
+
+func _test_absorption_effect_orients_cone_along_velocity() -> void:
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	var data := CelestialBodyData.new()
+	data.radius = 3.0
+	data.mass = 1000.0
+	hole.body_data = data
+	add_child(hole)
+	hole.global_position = Vector3(5, 0, 3)
+
+	hole.absorb(1.0, Vector3(0, 0, 6), Vector3(8, 0, 3))  # velocity along +Z
+
+	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
+	assert(particles != null, "absorb() should spawn an AbsorptionEffect particle system.")
+	assert(particles.one_shot, "Absorption effect should be one-shot.")
+	assert(particles.emitting, "Absorption effect should start emitting immediately.")
+	assert(
+		particles.global_position.is_equal_approx(Vector3(8, 0, 3)),
+		"Absorption effect should spawn at the contact point. Got: %s" % str(particles.global_position),
+	)
+
+	var material := particles.process_material as ParticleProcessMaterial
+	assert(material != null, "Absorption effect should have a ParticleProcessMaterial.")
+	# +Z velocity, tilted -90 deg about X so orbit_velocity's local XY plane
+	# lines up with the game's XZ ground plane -> local direction (0,-1,0).
+	assert(
+		material.direction.is_equal_approx(Vector3(0, -1, 0)),
+		"Cone direction should reflect the absorbed object's velocity in the tilted local frame. Got: %s"
+			% str(material.direction),
+	)
+	assert(material.spread <= 15.0, "The burst should be a narrow cone.")
+	assert(
+		material.radial_accel_min < 0.0 and material.radial_accel_max < 0.0,
+		"radial_accel should pull particles inward, toward the hole.",
+	)
+	assert(
+		material.orbit_velocity_max > 0.0,
+		"orbit_velocity should curl the burst as it's pulled in.",
+	)
+
+	var mesh := particles.draw_pass_1 as QuadMesh
+	assert(mesh != null, "Absorption effect should draw with a QuadMesh.")
+	var mesh_material := mesh.material as StandardMaterial3D
+	assert(mesh_material != null, "Absorption effect mesh should have a StandardMaterial3D.")
+	var lensing_material := hole._get_lensing_material()
+	assert(lensing_material != null, "Black hole should have a lensing material to compare against.")
+	assert(
+		mesh_material.render_priority > lensing_material.render_priority,
+		(
+			"Absorption particles must draw after (on top of) the lensing distortion plane, "
+			+ "or the burst gets painted over and is invisible. Particle priority: %d, lensing priority: %d"
+		) % [mesh_material.render_priority, lensing_material.render_priority],
+	)
+
+	hole.queue_free()
+	print("  PASS: absorption effect orients its cone along the absorbed object's velocity")
+
+
+func _test_absorption_effect_falls_back_to_radial_burst() -> void:
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	var data := CelestialBodyData.new()
+	data.radius = 3.0
+	data.mass = 1000.0
+	hole.body_data = data
+	add_child(hole)
+	hole.global_position = Vector3.ZERO
+
+	hole.absorb(1.0, Vector3.ZERO, Vector3(4, 0, 0))  # no velocity to go on
+
+	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
+	assert(particles != null, "absorb() should still spawn an effect without a velocity.")
+	var material := particles.process_material as ParticleProcessMaterial
+	assert(
+		material.direction.is_equal_approx(Vector3(1, 0, 0)),
+		"With no velocity, the burst should point outward from the hole through the contact point. Got: %s"
+			% str(material.direction),
+	)
+
+	hole.queue_free()
+	print("  PASS: absorption effect falls back to a radial burst when there's no velocity to follow")
+
+
+func _test_absorption_effect_scales_velocity_with_absorbed_speed() -> void:
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	var data := CelestialBodyData.new()
+	data.radius = 3.0
+	data.mass = 1000.0
+	hole.body_data = data
+	add_child(hole)
+	hole.global_position = Vector3.ZERO
+	hole.absorption_velocity_multiplier = 0.5
+
+	hole.absorb(1.0, Vector3(0, 0, 10), Vector3(0, 0, 3))  # speed = 10
+
+	var particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
+	var material := particles.process_material as ParticleProcessMaterial
+	var expected_boost := 10.0 * hole.absorption_velocity_multiplier
+	assert(
+		is_equal_approx(material.initial_velocity_min, hole.absorption_initial_velocity_min + expected_boost),
+		"initial_velocity_min should shift by absorbed speed * multiplier. Got: %f" % material.initial_velocity_min,
+	)
+	assert(
+		is_equal_approx(material.initial_velocity_max, hole.absorption_initial_velocity_max + expected_boost),
+		"initial_velocity_max should shift by absorbed speed * multiplier. Got: %f" % material.initial_velocity_max,
+	)
+
+	hole.queue_free()
+	print("  PASS: absorption effect scales initial velocity with the absorbed object's speed")
+
+
+func _test_absorption_effect_scales_particle_count_with_mass() -> void:
+	var hole := BlackHoleScene.instantiate() as BlackHole
+	var data := CelestialBodyData.new()
+	data.radius = 3.0
+	data.mass = 1000.0
+	hole.body_data = data
+	add_child(hole)
+	hole.global_position = Vector3.ZERO
+	hole.absorption_particles_per_mass = 2.0
+
+	hole.absorb(1.0, Vector3(0, 0, 5), Vector3(0, 0, 3))
+	var light_particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
+	var light_amount := light_particles.amount
+	light_particles.free()  # not queue_free(): must be gone before the next absorb() below
+
+	hole.absorb(20.0, Vector3(0, 0, 5), Vector3(0, 0, 3))
+	var heavy_particles := hole.get_node_or_null("AbsorptionEffect") as GPUParticles3D
+	assert(
+		heavy_particles.amount == light_amount + roundi(19.0 * hole.absorption_particles_per_mass),
+		"Heavier objects should spawn proportionally more particles. Light: %d, heavy: %d"
+			% [light_amount, heavy_particles.amount],
+	)
+	assert(heavy_particles.amount > light_amount, "Absorbing more mass should never spawn fewer particles.")
+
+	hole.queue_free()
+	print("  PASS: absorption effect scales particle count with absorbed mass")
 
 
 func _test_asteroid_crashes_ship() -> void:
