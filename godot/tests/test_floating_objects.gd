@@ -52,10 +52,12 @@ func _test_gravity_pulls_object_toward_body() -> void:
 	add_child(object)
 	object.global_position = Vector3(10, 0, 0)
 
-	object.tick(0.5)
-	# accel = 1000 / 10^2 = 10 toward origin -> velocity.x = -5
+	# A small delta (one real physics tick) keeps this close to a single
+	# Euler step even though tick() substeps internally for accuracy.
+	object.tick(1.0 / 60.0)
+	# accel = 1000 / 10^2 = 10 toward origin -> velocity.x ~= -10/60
 	assert(
-		absf(object.velocity.x + 5.0) < 0.01,
+		absf(object.velocity.x + 10.0 / 60.0) < 0.01,
 		"Object should accelerate toward the body. Velocity: %s" % str(object.velocity),
 	)
 	assert(

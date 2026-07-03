@@ -14,6 +14,17 @@ enum VelocityFrame {
 
 enum GravityOverride { KEEP, OFF, ON }
 
+enum RadialSpeedMode {
+	## Radial speed is initial_velocity.x (± velocity_jitter.x), as normal.
+	FIXED,
+	## Only valid with velocity_frame == RADIAL. Ignores initial_velocity.x;
+	## the spawner instead computes the exact outward speed so the object
+	## decelerates under gravity_source's current gravity and turns around
+	## at a random distance in [turnaround_distance_min, turnaround_distance_max],
+	## then falls back. Recomputed per spawn, so it tracks a growing body.
+	TURNAROUND_AT_RANGE,
+}
+
 ## Scene to spawn. A FloatingObject root gets velocity/gravity/despawn
 ## applied; any other Node3D is just placed.
 @export var scene: PackedScene
@@ -38,6 +49,13 @@ enum GravityOverride { KEEP, OFF, ON }
 
 ## Override gravity_affected on spawned FloatingObjects.
 @export var gravity_override: GravityOverride = GravityOverride.KEEP
+
+@export_group("Turnaround Launch")
+@export var radial_speed_mode: RadialSpeedMode = RadialSpeedMode.FIXED
+## Minimum distance from gravity_source at which the object turns around.
+@export var turnaround_distance_min: float = 70.0
+## Maximum distance from gravity_source at which the object turns around.
+@export var turnaround_distance_max: float = 140.0
 
 
 func pick_interval(rng: RandomNumberGenerator) -> float:

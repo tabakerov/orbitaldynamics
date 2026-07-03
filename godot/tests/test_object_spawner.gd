@@ -1,6 +1,7 @@
 extends Node
 
 const FuelPickupScene = preload("res://scenes/fuel_pickup.tscn")
+const CelestialBodyScene = preload("res://scenes/celestial_body.tscn")
 
 
 func _ready() -> void:
@@ -11,8 +12,27 @@ func _ready() -> void:
 	_test_radial_velocity()
 	_test_overrides_applied()
 	_test_interval_jitter_bounds()
+	_test_around_source_positions_track_growth()
+	_test_turnaround_speed_matches_analytic_formula()
+	_test_turnaround_launch_stops_and_falls_back()
 	print("All object spawner tests passed!")
 	get_tree().quit()
+
+
+func _make_gravity_source(mass: float, gravity_strength: float, radius: float) -> CelestialBody:
+	var data := CelestialBodyData.new()
+	data.mass = mass
+	data.gravity_strength = gravity_strength
+	data.falloff_exponent = 2.0
+	data.radius = radius
+	# Matches the real black hole's config: the field must stay inverse-square
+	# well past any requested turnaround distance, or it cuts off gravity
+	# (see CelestialSim.get_gravity_at's max_range check) and the object
+	# never turns around at all.
+	data.max_range = 1000.0
+	var body := CelestialBodyScene.instantiate() as CelestialBody
+	body.body_data = data
+	return body
 
 
 func _make_entry(interval: float, jitter: float = 0.0) -> SpawnEntry:
@@ -162,3 +182,123 @@ func _test_interval_jitter_bounds() -> void:
 			"Jittered interval out of bounds: %f" % interval,
 		)
 	print("  PASS: interval jitter stays within bounds")
+
+
+func _test_around_source_positions_track_growth() -> void:
+	var source := _make_gravity_source(1000.0, 1.0, 4.0)
+	add_child(source)
+
+	var entry := _make_entry(1.0)
+	var spawner := ObjectSpawner.new()
+	var entries: Array[SpawnEntry] = [entry]
+	spawner.entries = entries
+	spawner.volume_shape = ObjectSpawner.VolumeShape.AROUND_SOURCE
+	spawner.source_surface_margin = 2.0
+	add_child(spawner)
+	spawner._gravity_source_body = source
+
+	for i in 20:
+		var object := spawner.spawn_from_entry(entry)
+		var r := object.global_position.distance_to(source.global_position)
+		assert(absf(r - 6.0) < 0.001, "Spawn should sit at source radius + margin. Got: %f" % r)
+		assert(is_zero_approx(object.global_position.y), "Spawn must sit on the Y=0 plane.")
+
+	# Simulate the source growing (e.g. a black hole absorbing mass): the
+	# very next spawn should track the new radius with no extra wiring.
+	source.body_data.radius = 10.0
+	var grown_object := spawner.spawn_from_entry(entry)
+	var grown_r := grown_object.global_position.distance_to(source.global_position)
+	assert(absf(grown_r - 12.0) < 0.001, "Spawn radius should track source growth. Got: %f" % grown_r)
+
+	spawner.free()
+	source.free()
+	print("  PASS: AROUND_SOURCE spawn position tracks the source's current radius")
+
+
+func _test_turnaround_speed_matches_analytic_formula() -> void:
+	var source := _make_gravity_source(500.0, 2.0, 4.0)
+	add_child(source)
+
+	var entry := _make_entry(1.0)
+	entry.velocity_frame = SpawnEntry.VelocityFrame.RADIAL
+	entry.radial_speed_mode = SpawnEntry.RadialSpeedMode.TURNAROUND_AT_RANGE
+	entry.turnaround_distance_min = 100.0
+	entry.turnaround_distance_max = 100.0  # fixed target, no randomness
+
+	var spawner := ObjectSpawner.new()
+	var entries: Array[SpawnEntry] = [entry]
+	spawner.entries = entries
+	spawner.volume_shape = ObjectSpawner.VolumeShape.AROUND_SOURCE
+	spawner.source_surface_margin = 0.0
+	add_child(spawner)
+	spawner._gravity_source_body = source
+
+	var object := spawner.spawn_from_entry(entry) as FloatingObject
+	var r0 := object.global_position.distance_to(source.global_position)
+	var mu := source.body_data.gravity_strength * source.body_data.mass
+	var expected_v0 := sqrt(2.0 * mu * (1.0 / r0 - 1.0 / 100.0))
+	assert(
+		absf(object.velocity.length() - expected_v0) < 0.01,
+		"Launch speed should match the energy-conservation formula. Expected %f, got %f" % [
+			expected_v0, object.velocity.length(),
+		],
+	)
+	assert(
+		object.velocity.dot((object.global_position - source.global_position).normalized()) > 0.0,
+		"Launch velocity should point outward.",
+	)
+
+	spawner.free()
+	source.free()
+	print("  PASS: turnaround launch speed matches the analytic formula")
+
+
+func _test_turnaround_launch_stops_and_falls_back() -> void:
+	var source := _make_gravity_source(500.0, 2.0, 4.0)
+	add_child(source)
+	CelestialSim.initialize(
+		[source.body_data],
+		PackedVector3Array([Vector3.ZERO]),
+		PackedVector3Array([Vector3.ZERO]),
+		[true],
+	)
+
+	var entry := _make_entry(1.0)
+	entry.velocity_frame = SpawnEntry.VelocityFrame.RADIAL
+	entry.radial_speed_mode = SpawnEntry.RadialSpeedMode.TURNAROUND_AT_RANGE
+	entry.turnaround_distance_min = 100.0
+	entry.turnaround_distance_max = 100.0
+	entry.gravity_override = SpawnEntry.GravityOverride.ON
+
+	var spawner := ObjectSpawner.new()
+	var entries: Array[SpawnEntry] = [entry]
+	spawner.entries = entries
+	spawner.volume_shape = ObjectSpawner.VolumeShape.AROUND_SOURCE
+	spawner.source_surface_margin = 0.0
+	add_child(spawner)
+	spawner._gravity_source_body = source
+
+	var object := spawner.spawn_from_entry(entry) as FloatingObject
+
+	var delta := 1.0 / 60.0
+	var previous_radial_speed := object.velocity.length()  # positive: launched outward
+	var turnaround_distance := -1.0
+	for i in 6000:
+		object.tick(delta)
+		var offset := object.global_position - source.global_position
+		var radial_speed := object.velocity.dot(offset.normalized())
+		if radial_speed < 0.0 and previous_radial_speed >= 0.0:
+			turnaround_distance = offset.length()
+			break
+		previous_radial_speed = radial_speed
+
+	assert(turnaround_distance > 0.0, "Object should turn around within the simulated window.")
+	assert(
+		turnaround_distance >= 90.0 and turnaround_distance <= 110.0,
+		"Turnaround should happen near the requested 100-unit distance. Got: %f" % turnaround_distance,
+	)
+
+	CelestialSim.clear()
+	spawner.free()
+	source.free()
+	print("  PASS: turnaround launch stops near the target range and falls back")

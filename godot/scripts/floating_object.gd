@@ -37,11 +37,23 @@ func _physics_process(delta: float) -> void:
 	tick(delta)
 
 
+## Splitting each tick into several smaller symplectic-Euler steps keeps
+## fast, close-to-escape-velocity trajectories (e.g. a bonus launched from a
+## black hole's surface to turn around dozens of radii out) numerically
+## accurate — near escape velocity, a single 1/60s step's energy error is
+## amplified into a large error in where the object actually turns around.
+const GRAVITY_SUBSTEPS: int = 32
+
+
 func tick(delta: float) -> void:
 	if gravity_affected and CelestialSim.active:
-		velocity += CelestialSim.get_gravity_at(global_position) * delta
-		velocity.y = 0.0
-	global_position += velocity * delta
+		var sub_delta := delta / GRAVITY_SUBSTEPS
+		for i in GRAVITY_SUBSTEPS:
+			velocity += CelestialSim.get_gravity_at(global_position) * sub_delta
+			velocity.y = 0.0
+			global_position += velocity * sub_delta
+	else:
+		global_position += velocity * delta
 	global_position.y = 0.0
 	if despawn_distance > 0.0 and global_position.distance_to(despawn_center) > despawn_distance:
 		queue_free()

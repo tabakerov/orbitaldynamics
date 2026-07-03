@@ -8,7 +8,15 @@ extends Node3D
 
 signal object_spawned(object: Node3D)
 
-enum VolumeShape { BOX, DISC, RING }
+enum VolumeShape {
+	BOX,
+	DISC,
+	RING,
+	## Spawn on gravity_source's current surface (radius + source_surface_margin),
+	## at a random angle. Tracks a growing/shrinking body — e.g. objects
+	## erupting from a black hole.
+	AROUND_SOURCE,
+}
 
 @export var entries: Array[SpawnEntry] = []
 
@@ -36,6 +44,15 @@ enum VolumeShape { BOX, DISC, RING }
 		ring_outer_radius = maxf(value, 0.0)
 		_refresh_editor_preview()
 
+@export_group("Gravity Source")
+## Body used for VolumeShape.AROUND_SOURCE and SpawnEntry.RadialSpeedMode.
+## TURNAROUND_AT_RANGE launches. Its current body_data.mass/radius are read
+## fresh at every spawn, so growth (e.g. a black hole absorbing mass) is
+## tracked automatically.
+@export var gravity_source: NodePath
+## Spawn clearance above gravity_source's current radius (AROUND_SOURCE).
+@export var source_surface_margin: float = 3.0
+
 @export_group("Lifecycle")
 ## Spawned FloatingObjects are freed this far from the spawner (0 = keep
 ## each scene's own despawn settings).
@@ -56,9 +73,11 @@ var _rng := RandomNumberGenerator.new()
 var _next_spawn: Array[float] = []
 var _alive: Array[Array] = []
 var _preview_mesh: MeshInstance3D
+var _gravity_source_body: CelestialBody
 
 
 func _ready() -> void:
+	_gravity_source_body = get_node_or_null(gravity_source) as CelestialBody
 	if Engine.is_editor_hint():
 		_refresh_editor_preview()
 		return
@@ -110,6 +129,13 @@ func sample_local_position() -> Vector3:
 			var outer := maxf(ring_inner_radius, ring_outer_radius)
 			var radius := sqrt(lerpf(inner * inner, outer * outer, _rng.randf()))
 			return Vector3(cos(angle), 0.0, sin(angle)) * radius
+		VolumeShape.AROUND_SOURCE:
+			if not _gravity_source_body or not _gravity_source_body.body_data:
+				return Vector3.ZERO
+			var angle := _rng.randf_range(0.0, TAU)
+			var radius := _gravity_source_body.body_data.radius + source_surface_margin
+			var center := to_local(_gravity_source_body.global_position)
+			return center + Vector3(cos(angle), 0.0, sin(angle)) * radius
 	return Vector3.ZERO
 
 
@@ -122,6 +148,14 @@ func get_volume_extent() -> float:
 			return disc_radius
 		VolumeShape.RING:
 			return maxf(ring_inner_radius, ring_outer_radius)
+		VolumeShape.AROUND_SOURCE:
+			var extent := source_surface_margin
+			if _gravity_source_body and _gravity_source_body.body_data:
+				extent = maxf(extent, _gravity_source_body.body_data.radius + source_surface_margin)
+			for entry in entries:
+				if entry and entry.radial_speed_mode == SpawnEntry.RadialSpeedMode.TURNAROUND_AT_RANGE:
+					extent = maxf(extent, maxf(entry.turnaround_distance_min, entry.turnaround_distance_max))
+			return extent
 	return 0.0
 
 
@@ -186,8 +220,42 @@ func _sample_velocity(entry: SpawnEntry, spawn_position: Vector3) -> Vector3:
 			outward = Vector3.RIGHT
 		outward = outward.normalized()
 		var tangent := Vector3(outward.z, 0.0, -outward.x)
-		velocity = outward * velocity.x + tangent * velocity.z
+		var radial_speed := velocity.x
+		if entry.radial_speed_mode == SpawnEntry.RadialSpeedMode.TURNAROUND_AT_RANGE:
+			radial_speed = _compute_turnaround_speed(entry, spawn_position)
+		velocity = outward * radial_speed + tangent * velocity.z
 	return velocity
+
+
+## Outward speed so a purely radial object decelerates under gravity_source's
+## current gravity (mu = gravity_strength * mass) and turns around at a
+## random distance in [turnaround_distance_min, turnaround_distance_max],
+## derived from energy conservation for a power-law field g(r) = mu / r^n.
+## Assumes gravity_source dominates the local field at the spawn point
+## (true when it is the only nearby body, e.g. a lone black hole).
+func _compute_turnaround_speed(entry: SpawnEntry, spawn_position: Vector3) -> float:
+	if not _gravity_source_body or not _gravity_source_body.body_data:
+		return 0.0
+	var data := _gravity_source_body.body_data
+	var mu := data.gravity_strength * data.mass
+	var r0 := spawn_position.distance_to(_gravity_source_body.global_position)
+	if mu <= 0.0 or r0 <= 0.0:
+		return 0.0
+	var r_target := _rng.randf_range(
+		minf(entry.turnaround_distance_min, entry.turnaround_distance_max),
+		maxf(entry.turnaround_distance_min, entry.turnaround_distance_max),
+	)
+	if r_target <= r0:
+		return 0.0
+
+	var n := data.falloff_exponent
+	var energy_gap: float
+	if absf(n - 1.0) < 0.001:
+		energy_gap = mu * log(r_target / r0)
+	else:
+		var exponent := n - 1.0
+		energy_gap = mu / exponent * (1.0 / pow(r0, exponent) - 1.0 / pow(r_target, exponent))
+	return sqrt(maxf(energy_gap * 2.0, 0.0))
 
 
 func _refresh_editor_preview() -> void:
@@ -228,6 +296,9 @@ func _build_preview_mesh() -> ImmediateMesh:
 		VolumeShape.RING:
 			_add_preview_circle(mesh, ring_inner_radius)
 			_add_preview_circle(mesh, ring_outer_radius)
+		VolumeShape.AROUND_SOURCE:
+			if _gravity_source_body and _gravity_source_body.body_data:
+				_add_preview_circle(mesh, _gravity_source_body.body_data.radius + source_surface_margin)
 	mesh.surface_end()
 	return mesh
 

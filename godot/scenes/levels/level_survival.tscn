@@ -5,9 +5,9 @@
 [ext_resource type="Script" uid="uid://v20k51gxg78m" path="res://scripts/celestial_body_data.gd" id="3_bodydata"]
 [ext_resource type="PackedScene" uid="uid://81tuhw5m7x73" path="res://scenes/ship.tscn" id="4_ship"]
 [ext_resource type="Resource" path="res://resources/loadouts/default.tres" id="5_loadout"]
-[ext_resource type="Script" path="res://scripts/object_spawner.gd" id="6_spawner"]
-[ext_resource type="Script" path="res://scripts/spawn_entry.gd" id="7_entry"]
-[ext_resource type="Script" path="res://scripts/score_tracker.gd" id="8_score"]
+[ext_resource type="Script" uid="uid://dqr3r15chn20e" path="res://scripts/object_spawner.gd" id="6_spawner"]
+[ext_resource type="Script" uid="uid://datv8ex3khb5b" path="res://scripts/spawn_entry.gd" id="7_entry"]
+[ext_resource type="Script" uid="uid://cx00dbaeg6t7o" path="res://scripts/score_tracker.gd" id="8_score"]
 [ext_resource type="PackedScene" path="res://scenes/fuel_pickup.tscn" id="9_fuel"]
 [ext_resource type="PackedScene" path="res://scenes/bonus_star.tscn" id="10_star"]
 [ext_resource type="PackedScene" path="res://scenes/asteroid.tscn" id="11_asteroid"]
@@ -29,37 +29,44 @@ velocity_frame = 1
 max_alive = 12
 gravity_override = 2
 
-[sub_resource type="Resource" id="entry_star"]
+[sub_resource type="Resource" id="entry_star_eruption"]
 script = ExtResource("7_entry")
 scene = ExtResource("10_star")
-interval = 8.0
-interval_jitter = 3.0
-initial_velocity = Vector3(-1, 0, 4.6)
-velocity_jitter = Vector3(0.6, 0, 1)
+interval = 7.0
+interval_jitter = 2.5
 velocity_frame = 1
-max_alive = 5
+max_alive = 2
 gravity_override = 2
+radial_speed_mode = 1
 
 [sub_resource type="Resource" id="entry_asteroid"]
 script = ExtResource("7_entry")
 scene = ExtResource("11_asteroid")
-interval = 2.5
-interval_jitter = 2.0
+interval = 1.5
+interval_jitter = 1.0
 initial_velocity = Vector3(-5, 0, 1.5)
 velocity_jitter = Vector3(1.5, 0, 1)
 velocity_frame = 1
-max_alive = 12
+max_alive = 30
 gravity_override = 2
 
 [node name="LevelSurvival" type="Node3D" unique_id=1295372003]
 script = ExtResource("1_level")
 intro_message = "Не упадите в чёрную дыру!
-Собирайте топливо и бонусные звёзды, уворачивайтесь от астероидов.
+Собирайте топливо, уворачивайтесь от астероидов и хватайте бонусные звёзды,
+которые дыра выбрасывает наружу — если не успеете, они упадут обратно и покормят её.
 Всё, что падает в дыру, делает её больше. Чем дольше вы живы — тем больше очков."
 
 [node name="BlackHole" parent="." unique_id=758289330 instance=ExtResource("2_hole")]
 body_data = SubResource("hole_data")
 stationary = true
+
+[node name="BonusEruptionSpawner" type="Node3D" parent="BlackHole" unique_id=837465219]
+script = ExtResource("6_spawner")
+entries = Array[ExtResource("7_entry")]([SubResource("entry_star_eruption")])
+volume_shape = 3
+gravity_source = NodePath("..")
+source_surface_margin = 3.0
 
 [node name="Ship" parent="." unique_id=1026116833 instance=ExtResource("4_ship")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
@@ -68,10 +75,10 @@ loadout = ExtResource("5_loadout")
 
 [node name="ObjectSpawner" type="Node3D" parent="." unique_id=1328266842]
 script = ExtResource("6_spawner")
-entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel"), SubResource("entry_star"), SubResource("entry_asteroid")])
+entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel"), SubResource("entry_asteroid")])
 disc_radius = 31.97
-ring_inner_radius = 94.61
-ring_outer_radius = 120.0
+ring_inner_radius = 180.0
+ring_outer_radius = 200.0
 despawn_distance = 260.0
 
 [node name="ScoreTracker" type="Node" parent="." unique_id=1932522]
