@@ -19,6 +19,16 @@ mass = 2500.0
 max_range = 1000.0
 radius = 4.0
 
+[sub_resource type="Resource" id="entry_star_eruption"]
+script = ExtResource("7_entry")
+scene = ExtResource("10_star")
+interval = 2.0
+interval_jitter = 1.0
+velocity_frame = 1
+max_alive = 10
+gravity_override = 2
+radial_speed_mode = 1
+
 [sub_resource type="Resource" id="entry_fuel"]
 script = ExtResource("7_entry")
 scene = ExtResource("9_fuel")
@@ -29,16 +39,6 @@ velocity_frame = 1
 max_alive = 12
 gravity_override = 2
 
-[sub_resource type="Resource" id="entry_star_eruption"]
-script = ExtResource("7_entry")
-scene = ExtResource("10_star")
-interval = 7.0
-interval_jitter = 2.5
-velocity_frame = 1
-max_alive = 2
-gravity_override = 2
-radial_speed_mode = 1
-
 [sub_resource type="Resource" id="entry_asteroid"]
 script = ExtResource("7_entry")
 scene = ExtResource("11_asteroid")
@@ -47,7 +47,7 @@ interval_jitter = 1.0
 initial_velocity = Vector3(-5, 0, 1.5)
 velocity_jitter = Vector3(1.5, 0, 1)
 velocity_frame = 1
-max_alive = 30
+max_alive = 40
 gravity_override = 2
 
 [node name="LevelSurvival" type="Node3D" unique_id=1295372003]
@@ -66,7 +66,6 @@ script = ExtResource("6_spawner")
 entries = Array[ExtResource("7_entry")]([SubResource("entry_star_eruption")])
 volume_shape = 3
 gravity_source = NodePath("..")
-source_surface_margin = 3.0
 
 [node name="Ship" parent="." unique_id=1026116833 instance=ExtResource("4_ship")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
