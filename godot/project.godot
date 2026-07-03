@@ -22,6 +22,7 @@ config/run/main_scene="res://scenes/main.tscn"
 
 CelestialSim="*res://scripts/celestial_simulation.gd"
 FloatingGravity="*res://scripts/floating_gravity.gd"
+AsteroidCollisions="*res://scripts/asteroid_collisions.gd"
 
 [display]
 
