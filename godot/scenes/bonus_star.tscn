@@ -18,6 +18,7 @@ monitoring = true
 script = ExtResource("1")
 mass = 2.0
 score_value = 25
+attracts_others = true
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("collision_shape")

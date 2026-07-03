@@ -23,6 +23,19 @@ signal collected(object: FloatingObject)
 ## Freed when farther than this from despawn_center (0 = never).
 @export var despawn_distance: float = 0.0
 
+@export_group("Attraction")
+## If true, this object also pulls the ship and other attracting objects
+## toward itself — a small, always-on local gravity source (see
+## FloatingGravity), separate from CelestialSim's fixed N-body simulation.
+@export var attracts_others: bool = false
+@export var attraction_strength: float = 1.0
+## Reach of this object's pull. Keep small — this is meant for close
+## encounters between clustered objects, not a system-wide force like a
+## planet's (falls off as an inverse-square field within this range).
+@export_range(0.0, 500.0, 0.5, "or_greater") var attraction_range: float = 50.0
+@export var attraction_min_range: float = 1.0
+@export var attraction_falloff_exponent: float = 2.0
+
 var velocity: Vector3 = Vector3.ZERO
 var despawn_center: Vector3 = Vector3.ZERO
 
@@ -31,6 +44,13 @@ func _ready() -> void:
 	velocity = initial_velocity
 	velocity.y = 0.0
 	body_entered.connect(_on_body_entered)
+	if attracts_others:
+		FloatingGravity.register(self)
+
+
+func _exit_tree() -> void:
+	if attracts_others:
+		FloatingGravity.unregister(self)
 
 
 func _physics_process(delta: float) -> void:
@@ -46,10 +66,20 @@ const GRAVITY_SUBSTEPS: int = 32
 
 
 func tick(delta: float) -> void:
-	if gravity_affected and CelestialSim.active:
+	if gravity_affected and (CelestialSim.active or FloatingGravity.has_sources()):
+		# FloatingGravity is O(number of attracting objects) per call, so
+		# evaluating it once per tick (rather than once per substep) keeps
+		# the cost from scaling with GRAVITY_SUBSTEPS as the object count
+		# grows. It's a gentle, short-range force between slow-moving debris,
+		# not a near-escape-velocity trajectory — it doesn't need the same
+		# substep precision CelestialSim's black hole launches do.
+		var local_accel := FloatingGravity.get_gravity_at(global_position, self)
 		var sub_delta := delta / GRAVITY_SUBSTEPS
 		for i in GRAVITY_SUBSTEPS:
-			velocity += CelestialSim.get_gravity_at(global_position) * sub_delta
+			var accel := local_accel
+			if CelestialSim.active:
+				accel += CelestialSim.get_gravity_at(global_position)
+			velocity += accel * sub_delta
 			velocity.y = 0.0
 			global_position += velocity * sub_delta
 	else:

@@ -555,6 +555,7 @@ func _return_to_main_menu() -> void:
 
 	_camera_rig.set_target(null)
 	CelestialSim.clear()
+	FloatingGravity.clear()
 	_loading = false
 	_show_menu()
 

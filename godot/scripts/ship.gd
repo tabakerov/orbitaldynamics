@@ -252,7 +252,7 @@ func _apply_fuel_flow(delta: float, prepare: bool = true) -> void:
 
 
 func _apply_gravity() -> void:
-	var gravity := get_debug_gravity_acceleration()
+	var gravity := get_debug_gravity_acceleration() + FloatingGravity.get_gravity_at(global_position)
 	apply_central_force(gravity * mass)
 
 
