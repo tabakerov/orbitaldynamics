@@ -72,8 +72,8 @@ func _spawn_explosion(position: Vector3) -> void:
 	particles.randomness = 0.35
 	particles.local_coords = false
 	particles.visibility_aabb = AABB(Vector3(-6, -6, -6), Vector3(12, 12, 12))
-	particles.process_material = _build_explosion_material()
-	particles.draw_pass_1 = _build_explosion_mesh()
+	particles.process_material = build_explosion_material()
+	particles.draw_pass_1 = build_explosion_mesh()
 
 	var light := OmniLight3D.new()
 	light.light_color = Color(1.0, 0.5, 0.15)
@@ -95,7 +95,9 @@ func _spawn_explosion(position: Vector3) -> void:
 	)
 
 
-func _build_explosion_material() -> ParticleProcessMaterial:
+# Static and public: EffectWarmup replays the effect at boot to pre-compile
+# its shaders.
+static func build_explosion_material() -> ParticleProcessMaterial:
 	var gradient := Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.3, 0.7, 1.0])
 	gradient.colors = PackedColorArray([
@@ -124,7 +126,7 @@ func _build_explosion_material() -> ParticleProcessMaterial:
 	return material
 
 
-func _build_explosion_mesh() -> QuadMesh:
+static func build_explosion_mesh() -> QuadMesh:
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

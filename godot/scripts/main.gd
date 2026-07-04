@@ -49,6 +49,8 @@ func _ready() -> void:
 	_modifier_screen.closed.connect(_on_modifier_closed)
 	_modifier_screen.apply_loadout_change.connect(_on_apply_loadout_change)
 	_show_menu()
+	# Pre-compile effect shaders behind the menu; frees itself when done.
+	add_child(EffectWarmup.new())
 
 
 func _show_menu() -> void:

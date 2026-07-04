@@ -157,8 +157,8 @@ func spawn_crash_explosion(crash_position: Vector3) -> void:
 	particles.randomness = 0.35
 	particles.local_coords = false
 	particles.visibility_aabb = AABB(Vector3(-8.0, -8.0, -8.0), Vector3(16.0, 16.0, 16.0))
-	particles.process_material = _create_crash_particle_material()
-	particles.draw_pass_1 = _create_crash_particle_mesh()
+	particles.process_material = build_crash_particle_material()
+	particles.draw_pass_1 = build_crash_particle_mesh()
 
 	var light := OmniLight3D.new()
 	light.light_color = Color(1.0, 0.45, 0.12)
@@ -178,7 +178,9 @@ func _on_ship_crashed(crash_position: Vector3) -> void:
 	ship_crashed.emit(crash_position)
 
 
-func _create_crash_particle_material() -> ParticleProcessMaterial:
+# Static and public: EffectWarmup replays the effect at boot to pre-compile
+# its shaders.
+static func build_crash_particle_material() -> ParticleProcessMaterial:
 	var gradient := Gradient.new()
 	gradient.offsets = PackedFloat32Array([0.0, 0.25, 0.65, 1.0])
 	gradient.colors = PackedColorArray([
@@ -207,7 +209,7 @@ func _create_crash_particle_material() -> ParticleProcessMaterial:
 	return material
 
 
-func _create_crash_particle_mesh() -> QuadMesh:
+static func build_crash_particle_mesh() -> QuadMesh:
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

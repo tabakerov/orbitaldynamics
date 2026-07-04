@@ -141,8 +141,8 @@ func spawn_impact_effect(position: Vector3, parent: Node) -> void:
 	particles.randomness = 0.4
 	particles.local_coords = false
 	particles.visibility_aabb = AABB(Vector3(-4, -4, -4), Vector3(8, 8, 8))
-	particles.process_material = _build_impact_material()
-	particles.draw_pass_1 = _build_impact_mesh()
+	particles.process_material = build_impact_material()
+	particles.draw_pass_1 = build_impact_mesh()
 
 	parent.add_child(particles)
 	particles.global_position = position
@@ -151,7 +151,9 @@ func spawn_impact_effect(position: Vector3, parent: Node) -> void:
 	_free_impact_effect(particles)
 
 
-func _build_impact_material() -> ParticleProcessMaterial:
+# Static and public: EffectWarmup replays the effect at boot to pre-compile
+# its shaders.
+static func build_impact_material() -> ParticleProcessMaterial:
 	var material := ParticleProcessMaterial.new()
 	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
 	material.emission_sphere_radius = 0.3
@@ -168,7 +170,7 @@ func _build_impact_material() -> ParticleProcessMaterial:
 	return material
 
 
-func _build_impact_mesh() -> QuadMesh:
+static func build_impact_mesh() -> QuadMesh:
 	var material := StandardMaterial3D.new()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
