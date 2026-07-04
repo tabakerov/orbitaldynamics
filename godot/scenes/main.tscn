@@ -23,7 +23,8 @@ ambient_light_energy = 0.5
 
 [node name="Main" type="Node3D" unique_id=378044890]
 script = ExtResource("1")
-levels = Array[PackedScene]([ExtResource("4"), ExtResource("3_tipki"), ExtResource("3_o6xl0"), ExtResource("8_lvl015"), ExtResource("6"), ExtResource("9_lvlsurv")])
+levels = Array[PackedScene]([ExtResource("9_lvlsurv"), ExtResource("4"), ExtResource("3_tipki"), ExtResource("3_o6xl0"), ExtResource("8_lvl015"), ExtResource("6")])
+level_names = Array[String](["Выживание у чёрной дыры", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5"])
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=495406596]
 environment = SubResource("env")

@@ -1,6 +1,9 @@
 extends Node3D
 
 @export var levels: Array[PackedScene] = []
+## Menu button labels, parallel to levels. Missing/empty entries fall back
+## to "Level N".
+@export var level_names: Array[String] = []
 
 const CRASH_OVERLAY_DELAY_SECONDS: float = 2.0
 const DEFAULT_INTRO_CONTINUE_TEXT: String = "Продолжить"
@@ -32,7 +35,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var names: Array[String] = []
 	for i in levels.size():
-		names.append("Level %d" % (i + 1))
+		if i < level_names.size() and not level_names[i].strip_edges().is_empty():
+			names.append(level_names[i])
+		else:
+			names.append("Level %d" % (i + 1))
 	_level_select.setup(names)
 	_level_select.level_selected.connect(_on_level_selected)
 	_level_select.restart_requested.connect(_on_restart_requested)
