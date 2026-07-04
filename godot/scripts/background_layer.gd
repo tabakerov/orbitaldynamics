@@ -22,17 +22,19 @@ const COMPOSITE_SHADER = preload("res://resources/shaders/background_composite.g
 var _viewport: SubViewport
 var _background_camera: Camera3D
 var _game_camera: Camera3D
+var _rig: CameraRig
 
 
 func _ready() -> void:
-	var rig := get_node_or_null(camera_rig_path) as CameraRig
-	if rig:
-		_game_camera = rig.get_camera()
+	_rig = get_node_or_null(camera_rig_path) as CameraRig
+	if _rig:
+		_game_camera = _rig.get_camera()
 	if not _game_camera:
 		push_warning("BackgroundLayer: no game camera found, background layer disabled.")
 		return
 
-	_game_camera.cull_mask &= ~RENDER_LAYER_MASK
+	for camera in _rig.get_cameras():
+		camera.cull_mask &= ~RENDER_LAYER_MASK
 
 	_viewport = SubViewport.new()
 	_viewport.name = "BackgroundViewport"
@@ -85,6 +87,8 @@ func _process(_delta: float) -> void:
 
 
 func _sync_with_game_camera() -> void:
+	if _rig:
+		_game_camera = _rig.get_camera()
 	var size := Vector2i(get_viewport().get_visible_rect().size)
 	if _viewport.size != size and size.x > 0 and size.y > 0:
 		_viewport.size = size

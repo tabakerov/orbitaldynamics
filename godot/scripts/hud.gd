@@ -260,6 +260,7 @@ var _minimap: Minimap
 var _dock_prompt: Label
 var _score_label: Label
 var _cheat_label: Label
+var _camera_hint: Label
 var _ammo_label: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
@@ -331,6 +332,24 @@ func _ready() -> void:
 	add_child(_cheat_label)
 	Cheats.changed.connect(_on_cheats_changed)
 
+	_camera_hint = Label.new()
+	_camera_hint.name = "CameraHint"
+	_camera_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_camera_hint.offset_left = -280.0
+	_camera_hint.offset_top = -46.0
+	_camera_hint.offset_right = -18.0
+	_camera_hint.offset_bottom = -14.0
+	_camera_hint.text = "C · RB — смена камеры"
+	_camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_camera_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_camera_hint.add_theme_font_size_override("font_size", 16)
+	_camera_hint.add_theme_color_override("font_color", Color(0.72, 0.83, 0.95, 0.6))
+	_camera_hint.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.08, 0.9))
+	_camera_hint.add_theme_constant_override("outline_size", 3)
+	_camera_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_camera_hint.z_index = 5
+	add_child(_camera_hint)
+
 	_ammo_label = Label.new()
 	_ammo_label.name = "AmmoLabel"
 	# Sits just above the fuel readout (FuelLabel spans anchors 0.88–0.92).
@@ -371,6 +390,10 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_setup_score(_level.get_score_tracker() if _level else null)
 	_setup_ammo(ship)
 	_update_target_indicator()
+
+
+func set_camera(camera: Camera3D) -> void:
+	_camera = camera
 
 
 func _setup_score(tracker: ScoreTracker) -> void:

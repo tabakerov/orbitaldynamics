@@ -3,11 +3,13 @@ extends Node3D
 
 var target: Node3D
 
-@onready var _camera: Camera3D = $Camera3D
+var _active_index: int = 0
+
+@onready var _cameras: Array[Camera3D] = [$Camera3D, $ChaseCamera]
 
 
 func _ready() -> void:
-	_camera.current = true
+	_cameras[_active_index].current = true
 
 
 func set_target(node: Node3D) -> void:
@@ -19,7 +21,16 @@ func set_target(node: Node3D) -> void:
 
 
 func get_camera() -> Camera3D:
-	return _camera
+	return _cameras[_active_index]
+
+
+func get_cameras() -> Array[Camera3D]:
+	return _cameras
+
+
+func toggle_camera() -> void:
+	_active_index = (_active_index + 1) % _cameras.size()
+	_cameras[_active_index].current = true
 
 
 func _physics_process(_delta: float) -> void:

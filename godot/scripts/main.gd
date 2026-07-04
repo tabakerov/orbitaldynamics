@@ -219,6 +219,12 @@ func _unhandled_input(_event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	if Input.is_action_just_pressed("camera_toggle") and _current_level and not _level_select.visible:
+		_camera_rig.toggle_camera()
+		_hud.set_camera(_camera_rig.get_camera())
+		get_viewport().set_input_as_handled()
+		return
+
 	if Input.is_action_just_pressed("restart"):
 		if _level_select.visible:
 			return
