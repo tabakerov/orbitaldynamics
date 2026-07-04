@@ -53,6 +53,9 @@ class Minimap:
 	const STATION_COLOR := Color(0.95, 0.45, 1.0, 0.95)
 	const FUEL_COLOR := Color(0.25, 1.0, 0.45, 0.95)
 	const STAR_COLOR := Color(1.0, 0.85, 0.25, 0.95)
+	const LASER_AMMO_COLOR := Color(0.35, 0.85, 1.0, 0.95)
+	const ROCKET_AMMO_COLOR := Color(1.0, 0.55, 0.2, 0.95)
+	const ROCKET_COLOR := Color(1.0, 0.35, 0.3, 0.95)
 	const DEBRIS_COLOR := Color(0.62, 0.58, 0.54, 0.9)
 
 	var level: Level
@@ -202,6 +205,11 @@ class Minimap:
 				draw_circle(object_position, 3.5, FUEL_COLOR)
 			elif object is BonusStar:
 				draw_circle(object_position, 3.5, STAR_COLOR)
+			elif object is AmmoPickup:
+				var is_laser: bool = object.ammo_type == WeaponProfile.AmmoType.LASER
+				draw_circle(object_position, 3.5, LASER_AMMO_COLOR if is_laser else ROCKET_AMMO_COLOR)
+			elif object is Rocket:
+				draw_circle(object_position, 2.5, ROCKET_COLOR)
 			else:
 				draw_circle(object_position, 2.5, DEBRIS_COLOR)
 
@@ -241,6 +249,9 @@ class Minimap:
 const TARGET_INDICATOR_EDGE_PADDING: float = 36.0
 const TARGET_INDICATOR_DIRECTION_EPSILON: float = 0.001
 
+const AMMO_LASER_FONT_COLOR := Color(0.45, 0.9, 1.0, 1.0)
+const AMMO_ROCKET_FONT_COLOR := Color(1.0, 0.6, 0.25, 1.0)
+
 var _camera: Camera3D
 var _target: Target
 var _level: Level
@@ -249,6 +260,7 @@ var _minimap: Minimap
 var _dock_prompt: Label
 var _score_label: Label
 var _cheat_label: Label
+var _ammo_label: Label
 
 @onready var _fuel_bar: ProgressBar = %FuelBar
 @onready var _fuel_label: Label = %FuelLabel
@@ -319,6 +331,22 @@ func _ready() -> void:
 	add_child(_cheat_label)
 	Cheats.changed.connect(_on_cheats_changed)
 
+	_ammo_label = Label.new()
+	_ammo_label.name = "AmmoLabel"
+	# Sits just above the fuel readout (FuelLabel spans anchors 0.88–0.92).
+	_ammo_label.anchor_left = 0.02
+	_ammo_label.anchor_top = 0.83
+	_ammo_label.anchor_right = 0.3
+	_ammo_label.anchor_bottom = 0.88
+	_ammo_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_ammo_label.add_theme_font_size_override("font_size", 22)
+	_ammo_label.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.08, 1.0))
+	_ammo_label.add_theme_constant_override("outline_size", 4)
+	_ammo_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ammo_label.z_index = 10
+	_ammo_label.visible = false
+	add_child(_ammo_label)
+
 
 func show_dock_prompt(station_name: String = "станции") -> void:
 	if not _dock_prompt:
@@ -341,6 +369,7 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	if _minimap:
 		_minimap.setup(_level, ship)
 	_setup_score(_level.get_score_tracker() if _level else null)
+	_setup_ammo(ship)
 	_update_target_indicator()
 
 
@@ -355,6 +384,25 @@ func _setup_score(tracker: ScoreTracker) -> void:
 
 func _on_score_changed(score: int) -> void:
 	_score_label.text = "Очки: %d" % score
+
+
+func _setup_ammo(ship: Ship) -> void:
+	if not _ammo_label:
+		return
+	var weapons := ship.get_weapon_modules()
+	_ammo_label.visible = not weapons.is_empty()
+	for weapon in weapons:
+		weapon.ammo_changed.connect(_on_ammo_changed)
+		_on_ammo_changed(weapon.current_type, weapon.laser_charges, weapon.rocket_charges)
+
+
+func _on_ammo_changed(current_type: int, laser_charges: int, rocket_charges: int) -> void:
+	if current_type == WeaponProfile.AmmoType.LASER:
+		_ammo_label.text = "Лазер: %d  ·  ракеты: %d" % [laser_charges, rocket_charges]
+		_ammo_label.add_theme_color_override("font_color", AMMO_LASER_FONT_COLOR)
+	else:
+		_ammo_label.text = "Ракеты: %d  ·  лазер: %d" % [rocket_charges, laser_charges]
+		_ammo_label.add_theme_color_override("font_color", AMMO_ROCKET_FONT_COLOR)
 
 
 func _on_cheats_changed(cheats_enabled: bool) -> void:

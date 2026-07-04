@@ -280,6 +280,23 @@ func _recalculate_mass_properties() -> void:
 		center_of_mass = weighted / total
 
 
+func get_weapon_modules() -> Array[WeaponModule]:
+	var result: Array[WeaponModule] = []
+	for module: ShipModule in _modules.values():
+		if module is WeaponModule:
+			result.append(module)
+	return result
+
+
+## Routes picked-up ammo to the mounted guns. Returns false when the ship
+## has no gun to feed — the pickup then stays uncollected.
+func add_weapon_ammo(type: WeaponProfile.AmmoType, amount: int) -> bool:
+	var weapons := get_weapon_modules()
+	for weapon in weapons:
+		weapon.add_ammo(type, amount)
+	return not weapons.is_empty()
+
+
 func _on_body_entered(body: Node) -> void:
 	if body is CelestialBody:
 		crash_at(_get_crash_position(body))

@@ -18,6 +18,10 @@ extends FloatingObject
 ## see AsteroidCollisions.
 @export var merge_speed_threshold: float = 1.5
 
+## Below this world-space collision radius a laser hit vaporizes the rock
+## instead of splitting it further.
+@export var min_split_radius: float = 0.6
+
 var _spin_axis := Vector3.UP
 var _spin_speed := 0.0
 
@@ -71,3 +75,42 @@ func apply_merged_radius(new_radius: float) -> void:
 		return
 	scale = Vector3.ONE * (new_radius / _base_radius)
 	collision_radius = new_radius
+
+
+## Each laser-split fragment keeps half the parent's volume: r * 2^(-1/3).
+const SPLIT_RADIUS_FACTOR: float = 0.7937
+## Fragment speed across the beam. The pair separates at twice this, which
+## must beat merge_speed_threshold or touching fragments would fuse back.
+const SPLIT_SEPARATION_SPEED: float = 3.0
+
+
+## Laser hit: split into two half-volume fragments flying apart across the
+## beam, or vanish in a dust puff when already too small to split.
+func hit_by_laser(beam_direction: Vector3) -> void:
+	if is_queued_for_deletion():
+		return
+	AsteroidCollisions.spawn_impact_effect(global_position, get_parent())
+	if collision_radius >= min_split_radius:
+		_split(beam_direction)
+	queue_free()
+
+
+func _split(beam_direction: Vector3) -> void:
+	var fragment_radius := collision_radius * SPLIT_RADIUS_FACTOR
+	var axis := beam_direction.cross(Vector3.UP)
+	if axis.length_squared() < 0.0001:
+		axis = Vector3.RIGHT
+	axis = axis.normalized()
+	for side: float in [-1.0, 1.0]:
+		# duplicate() re-runs _ready (random spin/scale, collision registry);
+		# size, mass and motion are then overridden to the fragment's share.
+		var fragment := duplicate() as Asteroid
+		get_parent().add_child(fragment)
+		fragment.global_position = global_position + axis * (side * (fragment_radius + 0.05))
+		fragment.global_position.y = 0.0
+		fragment.apply_merged_radius(fragment_radius)
+		fragment.mass = mass * 0.5
+		fragment.velocity = velocity + axis * (side * SPLIT_SEPARATION_SPEED)
+		fragment.gravity_affected = gravity_affected
+		fragment.despawn_distance = despawn_distance
+		fragment.despawn_center = despawn_center

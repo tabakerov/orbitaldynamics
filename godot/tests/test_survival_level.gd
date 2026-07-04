@@ -28,7 +28,16 @@ func _test_structure_and_absorption_flow() -> void:
 		planet.initial_velocity.length() > 0.0,
 		"The planet should start with an orbital velocity.",
 	)
-	assert(level.get_ship() != null, "Survival level should contain a ship.")
+	var ship := level.get_ship()
+	assert(ship != null, "Survival level should contain a ship.")
+	assert(
+		ship.get_weapon_modules().size() == 1,
+		"Survival ship should mount a weapon module instead of the front engine.",
+	)
+	assert(
+		not (ship._modules.get(MountSlot.Binding.FRONT) is EngineModule),
+		"The front mount should carry the gun, not an engine.",
+	)
 	assert(level.get_score_tracker() != null, "Survival level should track score.")
 
 	var spawners := level.get_spawners()
@@ -47,7 +56,26 @@ func _test_structure_and_absorption_flow() -> void:
 		else:
 			asteroid_spawner = spawner
 	assert(ring_spawner != null, "Survival level should have a ring spawner for fuel.")
-	assert(ring_spawner.entries.size() == 1, "Ring spawner should have only the fuel entry.")
+	assert(
+		ring_spawner.entries.size() == 3,
+		"Ring spawner should carry fuel, laser ammo and rocket ammo entries.",
+	)
+	var has_fuel := false
+	var has_laser_ammo := false
+	var has_rocket_ammo := false
+	for entry: SpawnEntry in ring_spawner.entries:
+		var sample := entry.scene.instantiate()
+		if sample is FuelPickup:
+			has_fuel = true
+		elif sample is AmmoPickup:
+			if sample.ammo_type == WeaponProfile.AmmoType.LASER:
+				has_laser_ammo = true
+			else:
+				has_rocket_ammo = true
+		sample.free()
+	assert(has_fuel, "Ring spawner should still spawn fuel.")
+	assert(has_laser_ammo, "Ring spawner should spawn laser ammo crates.")
+	assert(has_rocket_ammo, "Ring spawner should spawn rocket ammo crates.")
 	assert(eruption_spawner != null, "Survival level should have a bonus eruption spawner around the black hole.")
 	assert(eruption_spawner.entries.size() == 1, "Eruption spawner should have one bonus star entry.")
 	var eruption_entry := eruption_spawner.entries[0]

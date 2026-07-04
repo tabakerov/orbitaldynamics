@@ -82,7 +82,7 @@ func _resolve_pair(a: Asteroid, b: Asteroid) -> Asteroid:
 		return null  # already separating along the normal, no impact
 
 	var impact_point := a.global_position.lerp(b.global_position, b.mass / total_mass)
-	_spawn_impact_effect(impact_point, a.get_parent())
+	spawn_impact_effect(impact_point, a.get_parent())
 
 	var merge_threshold := minf(a.merge_speed_threshold, b.merge_speed_threshold)
 	if closing_speed <= merge_threshold:
@@ -125,7 +125,9 @@ func _merge(a: Asteroid, b: Asteroid) -> Asteroid:
 	return absorbed
 
 
-func _spawn_impact_effect(position: Vector3, parent: Node) -> void:
+## Dust puff at an impact point. Public: laser hits reuse it (see
+## Asteroid.hit_by_laser), not just asteroid-vs-asteroid bounces.
+func spawn_impact_effect(position: Vector3, parent: Node) -> void:
 	if not parent or not is_instance_valid(parent):
 		return
 

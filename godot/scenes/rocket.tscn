@@ -1,0 +1,82 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rocket.gd" id="1"]
+
+[sub_resource type="SphereShape3D" id="collision_shape"]
+radius = 0.3
+
+[sub_resource type="StandardMaterial3D" id="body_mat"]
+albedo_color = Color(0.75, 0.76, 0.8, 1)
+
+[sub_resource type="BoxMesh" id="body_mesh"]
+size = Vector3(0.16, 0.16, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="tip_mat"]
+albedo_color = Color(0.9, 0.25, 0.2, 1)
+emission_enabled = true
+emission = Color(0.6, 0.1, 0.05, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="BoxMesh" id="tip_mesh"]
+size = Vector3(0.12, 0.12, 0.16)
+
+[sub_resource type="Gradient" id="color_ramp"]
+offsets = PackedFloat32Array(0, 0.4, 1)
+colors = PackedColorArray(1, 0.7, 0.2, 1, 1, 0.3, 0.05, 0.8, 0.2, 0.05, 0.02, 0)
+
+[sub_resource type="GradientTexture1D" id="ramp_texture"]
+gradient = SubResource("color_ramp")
+
+[sub_resource type="ParticleProcessMaterial" id="particle_mat"]
+direction = Vector3(0, 0, 1)
+spread = 12.0
+initial_velocity_min = 2.0
+initial_velocity_max = 4.0
+gravity = Vector3(0, 0, 0)
+scale_min = 0.5
+color = Color(1, 0.5, 0.1, 1)
+color_ramp = SubResource("ramp_texture")
+
+[sub_resource type="StandardMaterial3D" id="particle_billboard_mat"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="particle_mesh"]
+material = SubResource("particle_billboard_mat")
+size = Vector2(0.06, 0.06)
+
+[node name="Rocket" type="Area3D"]
+script = ExtResource("1")
+mass = 2.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("collision_shape")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+mesh = SubResource("body_mesh")
+material_override = SubResource("body_mat")
+
+[node name="Tip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.35)
+mesh = SubResource("tip_mesh")
+material_override = SubResource("tip_mat")
+
+[node name="ExhaustParticles" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.4)
+emitting = false
+amount = 24
+lifetime = 0.3
+process_material = SubResource("particle_mat")
+draw_pass_1 = SubResource("particle_mesh")
+
+[node name="BoostLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.4)
+light_color = Color(1, 0.4, 0.1, 1)
+light_energy = 0.6
+omni_range = 2.5
+omni_attenuation = 1.5
