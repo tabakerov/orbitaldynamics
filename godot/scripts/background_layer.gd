@@ -65,7 +65,10 @@ func _ready() -> void:
 	material.shader = COMPOSITE_SHADER
 	material.set_shader_parameter("background_texture", _viewport.get_texture())
 	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
-		material.set_shader_parameter("far_clip_z", 0.999999)
+		# Since 4.6 the compatibility renderer is also reversed-Z
+		# (glDepthFunc(GL_GREATER)), but with the GL clip convention the far
+		# plane sits at NDC z = -1, not +1.
+		material.set_shader_parameter("far_clip_z", -0.999999)
 
 	var quad := MeshInstance3D.new()
 	quad.name = "BackgroundComposite"
