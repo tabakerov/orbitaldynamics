@@ -7,6 +7,7 @@ const MainScene = preload("res://scenes/main.tscn")
 func _ready() -> void:
 	await _test_gamepad_accept_selects_focused_level()
 	await _test_pause_menu_action_opens_level_list()
+	await _test_loaded_level_freezes_while_intro_is_shown()
 	print("All level select input tests passed!")
 	get_tree().quit()
 
@@ -66,3 +67,29 @@ func _test_pause_menu_action_opens_level_list() -> void:
 	get_tree().paused = false
 	main.queue_free()
 	await get_tree().process_frame
+
+
+func _test_loaded_level_freezes_while_intro_is_shown() -> void:
+	var main := MainScene.instantiate()
+	add_child(main)
+	await get_tree().process_frame
+
+	main._on_level_selected(0)
+	while main._loading:
+		await get_tree().process_frame
+
+	assert(main._current_level != null, "Level 0 should load.")
+	assert(main._intro_overlay.visible, "Level 0 has an intro message, so the intro overlay should be shown.")
+	assert(get_tree().paused, "The tree should be paused while the intro overlay is shown.")
+	assert(
+		not main._current_level.can_process(),
+		"The loaded level must pause with the tree; it must not inherit Main's PROCESS_MODE_ALWAYS.",
+	)
+	print("  PASS: loaded level freezes while intro is shown")
+
+	get_tree().paused = false
+	main.queue_free()
+	await get_tree().process_frame
+	CelestialSim.clear()
+	FloatingGravity.clear()
+	AsteroidCollisions.clear()

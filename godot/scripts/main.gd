@@ -110,6 +110,9 @@ func _load_level(index: int) -> void:
 		push_error("Failed to load level %d" % index)
 		_loading = false
 		return
+	# Main is PROCESS_MODE_ALWAYS so menus keep reading input while the tree
+	# is paused; the level must not inherit that or pause won't freeze it.
+	_current_level.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(_current_level)
 
 	_current_level.level_completed.connect(_on_level_completed)
