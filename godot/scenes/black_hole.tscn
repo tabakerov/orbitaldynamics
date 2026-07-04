@@ -28,4 +28,5 @@ shape = SubResource("collision_shape")
 
 [node name="LensingMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+layers = 2
 mesh = SubResource("lensing_plane")

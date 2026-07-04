@@ -100,6 +100,9 @@ func _create_multimesh(entry: ScatterEntry, rng: RandomNumberGenerator, editor_p
 	mmi.name = "GeneratedScatter"
 	mmi.set_meta(GENERATED_META, true)
 	mmi.multimesh = mm
+	# Background-only layer: rendered by BackgroundLayer's camera and warped
+	# by the black hole's lensing; the gameplay camera doesn't see it.
+	mmi.layers = BackgroundLayer.RENDER_LAYER_MASK
 	if entry.material_override:
 		mmi.material_override = entry.material_override
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

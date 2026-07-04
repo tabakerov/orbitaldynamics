@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://b8modscreen001" path="res://scenes/ship_modifier_screen.tscn" id="7_modscr"]
 [ext_resource type="PackedScene" uid="uid://b8level015demo" path="res://scenes/levels/level_015.tscn" id="8_lvl015"]
 [ext_resource type="PackedScene" uid="uid://bvg3dm6k6g441" path="res://scenes/levels/level_survival.tscn" id="9_lvlsurv"]
+[ext_resource type="Script" path="res://scripts/background_layer.gd" id="10_bglayer"]
 
 [sub_resource type="Sky" id="sky"]
 
@@ -30,6 +31,10 @@ level_names = Array[String](["Выживание у чёрной дыры", "Lev
 environment = SubResource("env")
 
 [node name="CameraRig" parent="." unique_id=271585640 instance=ExtResource("2")]
+
+[node name="BackgroundLayer" type="Node3D" parent="." unique_id=1188309254]
+script = ExtResource("10_bglayer")
+camera_rig_path = NodePath("../CameraRig")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1640224254]
 
