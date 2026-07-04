@@ -14,41 +14,59 @@ func _test_structure_and_absorption_flow() -> void:
 	add_child(level)
 
 	var hole: BlackHole = null
+	var planet: Planet = null
 	for body in level.get_celestial_bodies():
 		if body is BlackHole:
 			hole = body
+		elif body is Planet:
+			planet = body
 	assert(hole != null, "Survival level should contain a black hole.")
 	assert(hole.stationary, "The black hole should be stationary.")
+	assert(planet != null, "Survival level should contain an orbiting planet.")
+	assert(not planet.stationary, "The planet should move under orbital dynamics.")
+	assert(
+		planet.initial_velocity.length() > 0.0,
+		"The planet should start with an orbital velocity.",
+	)
 	assert(level.get_ship() != null, "Survival level should contain a ship.")
 	assert(level.get_score_tracker() != null, "Survival level should track score.")
 
 	var spawners := level.get_spawners()
-	assert(spawners.size() == 2, "Survival level should have a ring spawner and a bonus eruption spawner.")
+	assert(
+		spawners.size() == 3,
+		"Survival level should have a fuel ring spawner, a bonus eruption spawner and a planet asteroid spawner.",
+	)
 	var ring_spawner: ObjectSpawner = null
 	var eruption_spawner: ObjectSpawner = null
+	var asteroid_spawner: ObjectSpawner = null
 	for spawner in spawners:
-		if spawner.volume_shape == ObjectSpawner.VolumeShape.AROUND_SOURCE:
+		if spawner.volume_shape != ObjectSpawner.VolumeShape.AROUND_SOURCE:
+			ring_spawner = spawner
+		elif spawner.get_parent() == hole:
 			eruption_spawner = spawner
 		else:
-			ring_spawner = spawner
-	assert(ring_spawner != null, "Survival level should have a ring spawner for fuel and asteroids.")
-	assert(ring_spawner.entries.size() == 2, "Ring spawner should have fuel and asteroid entries.")
+			asteroid_spawner = spawner
+	assert(ring_spawner != null, "Survival level should have a ring spawner for fuel.")
+	assert(ring_spawner.entries.size() == 1, "Ring spawner should have only the fuel entry.")
 	assert(eruption_spawner != null, "Survival level should have a bonus eruption spawner around the black hole.")
 	assert(eruption_spawner.entries.size() == 1, "Eruption spawner should have one bonus star entry.")
-	assert(
-		eruption_spawner.get_parent() == hole,
-		"Eruption spawner should be nested under the black hole so it tracks its position and growth.",
-	)
 	var eruption_entry := eruption_spawner.entries[0]
 	assert(
 		eruption_entry.radial_speed_mode == SpawnEntry.RadialSpeedMode.TURNAROUND_AT_RANGE,
 		"Bonus entry should use the turnaround launch mode.",
 	)
+	assert(asteroid_spawner != null, "Survival level should have an asteroid spawner tracking the planet.")
+	assert(asteroid_spawner.entries.size() == 1, "Asteroid spawner should have one asteroid entry.")
+	assert(
+		asteroid_spawner.get_node(asteroid_spawner.gravity_source) == planet,
+		"Asteroid spawner should emit from the planet's surface.",
+	)
 	print("  PASS: survival level structure")
 
-	# Fast-forward both spawners: objects appear and inherit gravity.
+	# Fast-forward the spawners: objects appear and inherit gravity.
 	ring_spawner.tick(30.0)
 	eruption_spawner.tick(30.0)
+	asteroid_spawner.tick(30.0)
 	var objects := level.get_floating_objects()
 	assert(objects.size() > 0, "Spawners should produce objects after 30s.")
 	for object in objects:
@@ -61,7 +79,15 @@ func _test_structure_and_absorption_flow() -> void:
 			r <= eruption_spawner.source_surface_margin + hole.body_data.radius + 0.01,
 			"Bonus stars should erupt from the hole's surface. Distance: %f" % r,
 		)
-	print("  PASS: spawner fast-forward produces gravity-affected objects, bonuses erupt from the hole")
+	var asteroids := objects.filter(func(o: FloatingObject) -> bool: return o is Asteroid)
+	assert(asteroids.size() > 0, "The planet spawner should have produced asteroids.")
+	for asteroid: FloatingObject in asteroids:
+		var dist := asteroid.global_position.distance_to(planet.global_position)
+		assert(
+			dist <= asteroid_spawner.source_surface_margin + planet.body_data.radius + 0.01,
+			"Asteroids should spawn at the planet's surface. Distance: %f" % dist,
+		)
+	print("  PASS: spawner fast-forward produces gravity-affected objects, bonuses erupt from the hole, asteroids from the planet")
 
 	# Park one object on the hole: real physics contact should absorb it
 	# (deferred handler) and grow the hole.

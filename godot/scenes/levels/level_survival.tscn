@@ -12,12 +12,20 @@
 [ext_resource type="PackedScene" path="res://scenes/bonus_star.tscn" id="10_star"]
 [ext_resource type="PackedScene" uid="uid://basih44aaq8mr" path="res://scenes/asteroid.tscn" id="11_asteroid"]
 [ext_resource type="PackedScene" uid="uid://urkxmiew8a77" path="res://scenes/background_scatter.tscn" id="12_scatter"]
+[ext_resource type="PackedScene" path="res://scenes/planet.tscn" id="13_planet"]
+[ext_resource type="Resource" uid="uid://doslh2v18nmv3" path="res://resources/planet_desert.tres" id="14_planetvis"]
 
 [sub_resource type="Resource" id="hole_data"]
 script = ExtResource("3_bodydata")
 mass = 2500.0
 max_range = 1000.0
 radius = 4.0
+
+[sub_resource type="Resource" id="planet_data"]
+script = ExtResource("3_bodydata")
+mass = 60.0
+max_range = 120.0
+radius = 6.0
 
 [sub_resource type="Resource" id="entry_star_eruption"]
 script = ExtResource("7_entry")
@@ -70,16 +78,30 @@ volume_shape = 3
 gravity_source = NodePath("..")
 
 [node name="Ship" parent="." unique_id=1026116833 instance=ExtResource("4_ship")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -70)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 40)
 linear_velocity = Vector3(-6, 0, 0)
 loadout = ExtResource("5_loadout")
 
+[node name="Planet" parent="." unique_id=1550443921 instance=ExtResource("13_planet")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 220, 0, 0)
+visual_data = ExtResource("14_planetvis")
+body_data = SubResource("planet_data")
+initial_velocity = Vector3(0, 0, -3.371)
+
 [node name="ObjectSpawner" type="Node3D" parent="." unique_id=1328266842]
 script = ExtResource("6_spawner")
-entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel"), SubResource("entry_asteroid")])
+entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel")])
 disc_radius = 31.97
 ring_inner_radius = 180.0
 ring_outer_radius = 200.0
+despawn_distance = 260.0
+
+[node name="AsteroidSpawner" type="Node3D" parent="." unique_id=902117744]
+script = ExtResource("6_spawner")
+entries = Array[ExtResource("7_entry")]([SubResource("entry_asteroid")])
+volume_shape = 3
+gravity_source = NodePath("../Planet")
+source_surface_margin = 3.0
 despawn_distance = 260.0
 
 [node name="ScoreTracker" type="Node" parent="." unique_id=1932522]

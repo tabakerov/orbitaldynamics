@@ -35,6 +35,10 @@ func _setup_visuals() -> void:
 	await terrain_tex.changed
 	await biome_tex.changed
 	await cloud_tex.changed
+	# The awaits can outlive this node's stay in the tree (e.g. editor scans
+	# loading and dropping the scene) — bail out instead of touching a null tree.
+	if not is_inside_tree():
+		return
 
 	_cached_seed = visual_data.seed
 	_cached_noise_scale = visual_data.noise_scale
