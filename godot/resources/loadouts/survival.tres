@@ -1,15 +1,28 @@
-[gd_resource type="Resource" script_class="ShipLoadout" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="ShipLoadout" format=3 uid="uid://df6wtklcsy51t"]
 
-[ext_resource type="Script" path="res://scripts/ship_loadout.gd" id="1"]
-[ext_resource type="Resource" path="res://resources/hulls/rectangular.tres" id="2"]
-[ext_resource type="Resource" path="res://resources/engines/engine_standard.tres" id="3"]
+[ext_resource type="Script" uid="uid://cbodd7rqpyy3y" path="res://scripts/ship_loadout.gd" id="1"]
+[ext_resource type="Resource" uid="uid://d3cyhkyluspmq" path="res://resources/hulls/rectangular.tres" id="2"]
+[ext_resource type="Resource" uid="uid://241lbhm3rveg" path="res://resources/engines/engine_standard.tres" id="3"]
+[ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="3_lkd1s"]
 [ext_resource type="Resource" path="res://resources/weapons/weapon_standard.tres" id="4"]
+[ext_resource type="Script" uid="uid://cs61w530s1wng" path="res://scripts/engine_profile.gd" id="4_vdgv1"]
+
+[sub_resource type="Resource" id="Resource_ri3a6"]
+script = ExtResource("4_vdgv1")
+max_thrust = 20.0
+module_scene = ExtResource("3_lkd1s")
+display_name = "Standard Engine"
+
+[sub_resource type="Resource" id="Resource_lhpee"]
+script = ExtResource("4_vdgv1")
+max_thrust = 20.0
+module_scene = ExtResource("3_lkd1s")
+display_name = "Standard Engine"
 
 [resource]
 script = ExtResource("1")
 hull = ExtResource("2")
-starting_internal_fuel = 200.0
 front_module = ExtResource("4")
 rear_module = ExtResource("3")
-left_module = ExtResource("3")
-right_module = ExtResource("3")
+left_module = SubResource("Resource_ri3a6")
+right_module = SubResource("Resource_lhpee")

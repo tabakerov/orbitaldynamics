@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HullData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="HullData" format=3 uid="uid://d3cyhkyluspmq"]
 
-[ext_resource type="Script" path="res://scripts/hull_data.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/mount_slot.gd" id="2"]
+[ext_resource type="Script" uid="uid://bsp8o528s0vha" path="res://scripts/hull_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://bh234rv4vwc8i" path="res://scripts/mount_slot.gd" id="2"]
 [ext_resource type="ArrayMesh" uid="uid://ddh4wqkh6t6mv" path="res://assets/ship.obj" id="3"]
 
 [sub_resource type="BoxShape3D" id="hull_box"]
@@ -10,7 +10,6 @@ size = Vector3(1.5, 0.801, 1.5)
 
 [sub_resource type="Resource" id="mount_front"]
 script = ExtResource("2")
-binding = 0
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, -0.9)
 
 [sub_resource type="Resource" id="mount_rear"]
@@ -21,17 +20,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.9)
 [sub_resource type="Resource" id="mount_left"]
 script = ExtResource("2")
 binding = 2
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
 
 [sub_resource type="Resource" id="mount_right"]
 script = ExtResource("2")
 binding = 3
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 1, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
 
 [resource]
 script = ExtResource("1")
-dry_mass = 10.0
-max_internal_fuel = 200.0
 mesh = ExtResource("3")
 collision_shape = SubResource("hull_box")
 collision_transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0, 0.099609375, 0)

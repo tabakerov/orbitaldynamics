@@ -1,13 +1,9 @@
-[gd_resource type="Resource" script_class="EngineProfile" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="EngineProfile" format=3 uid="uid://241lbhm3rveg"]
 
-[ext_resource type="Script" path="res://scripts/engine_profile.gd" id="1"]
+[ext_resource type="Script" uid="uid://cs61w530s1wng" path="res://scripts/engine_profile.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="2"]
 
 [resource]
 script = ExtResource("1")
 module_scene = ExtResource("2")
 display_name = "Standard Engine"
-max_thrust = 100.0
-fuel_consumption_rate = 10.0
-gimbal_range_deg = 30.0
-dry_mass = 0.0
