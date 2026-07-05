@@ -1,24 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/rocket.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://crpptm28if3d6" path="res://assets/rocket.fbx" id="2"]
 
 [sub_resource type="SphereShape3D" id="collision_shape"]
 radius = 0.3
-
-[sub_resource type="StandardMaterial3D" id="body_mat"]
-albedo_color = Color(0.75, 0.76, 0.8, 1)
-
-[sub_resource type="BoxMesh" id="body_mesh"]
-size = Vector3(0.16, 0.16, 0.6)
-
-[sub_resource type="StandardMaterial3D" id="tip_mat"]
-albedo_color = Color(0.9, 0.25, 0.2, 1)
-emission_enabled = true
-emission = Color(0.6, 0.1, 0.05, 1)
-emission_energy_multiplier = 1.2
-
-[sub_resource type="BoxMesh" id="tip_mesh"]
-size = Vector3(0.12, 0.12, 0.16)
 
 [sub_resource type="Gradient" id="color_ramp"]
 offsets = PackedFloat32Array(0, 0.4, 1)
@@ -57,14 +43,8 @@ mass = 2.0
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("collision_shape")
 
-[node name="Body" type="MeshInstance3D" parent="."]
-mesh = SubResource("body_mesh")
-material_override = SubResource("body_mat")
-
-[node name="Tip" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.35)
-mesh = SubResource("tip_mesh")
-material_override = SubResource("tip_mat")
+[node name="Model" parent="." instance=ExtResource("2")]
+transform = Transform3D(0.16, 0, 0, 0, 0, 0.16, 0, -0.16, 0, 0, 0, 0.356)
 
 [node name="ExhaustParticles" type="GPUParticles3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.4)

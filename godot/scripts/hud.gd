@@ -285,7 +285,7 @@ class CollectibleLegend:
 		},
 	]
 
-	var _icon_meshes: Array[MeshInstance3D] = []
+	var _icon_visuals: Array[Node3D] = []
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -301,7 +301,7 @@ class CollectibleLegend:
 		for child in get_children():
 			remove_child(child)
 			child.free()
-		_icon_meshes.clear()
+		_icon_visuals.clear()
 		visible = false
 		if not level or not is_instance_valid(level):
 			return
@@ -320,8 +320,8 @@ class CollectibleLegend:
 		offset_bottom = offset_top + min_size.y
 
 	func _process(delta: float) -> void:
-		for mesh in _icon_meshes:
-			mesh.rotate_y(delta * SPIN_SPEED)
+		for visual in _icon_visuals:
+			visual.rotate_y(delta * SPIN_SPEED)
 
 	## Collectibles either sit in the level from the start or come out of a
 	## spawner later; both count as "available on this level".
@@ -380,37 +380,63 @@ class CollectibleLegend:
 		light.rotation_degrees = Vector3(-35.0, -30.0, 0.0)
 		viewport.add_child(light)
 
-		var mesh := _detach_mesh(scene)
-		if mesh:
-			if not mesh.mesh:
+		var visual := _detach_visual(scene)
+		if visual:
+			var single_mesh := visual as MeshInstance3D
+			if single_mesh and not single_mesh.mesh:
 				# The bonus star builds its mesh in _ready, which detached
 				# nodes never run.
-				mesh.mesh = BonusStar.build_star_mesh()
-			_fit_to_icon(mesh)
-			_icon_meshes.append(mesh)
-			viewport.add_child(mesh)
+				single_mesh.mesh = BonusStar.build_star_mesh()
+			_fit_to_icon(visual)
+			_icon_visuals.append(visual)
+			viewport.add_child(visual)
 		return container
 
 	## Instantiates the pickup without entering the tree (no _ready, so no
-	## gravity/score registration) and keeps only its mesh.
-	static func _detach_mesh(scene: PackedScene) -> MeshInstance3D:
+	## gravity/score registration) and keeps only its visual part — a "Visual"
+	## group node for multi-mesh pickups, otherwise the single MeshInstance3D.
+	static func _detach_visual(scene: PackedScene) -> Node3D:
 		var root := scene.instantiate()
-		var mesh := root.get_node_or_null("MeshInstance3D") as MeshInstance3D
-		if mesh:
-			root.remove_child(mesh)
+		var visual: Node3D = root.get_node_or_null("Visual")
+		if not visual:
+			visual = root.get_node_or_null("MeshInstance3D") as MeshInstance3D
+		if visual:
+			root.remove_child(visual)
 		root.free()
-		return mesh
+		return visual
 
-	static func _fit_to_icon(mesh: MeshInstance3D) -> void:
-		var aabb := mesh.get_aabb()
-		var effective := aabb.size * mesh.scale
+	static func _fit_to_icon(visual: Node3D) -> void:
+		var aabb := _visual_aabb(visual)
+		var effective := aabb.size * visual.scale
 		var max_dim := maxf(effective.x, maxf(effective.y, effective.z))
 		if max_dim > 0.001:
-			mesh.scale *= 1.6 / max_dim
-		mesh.position = -aabb.get_center() * mesh.scale
+			visual.scale *= 1.6 / max_dim
+		visual.position = -aabb.get_center() * visual.scale
 		# Flat meshes (the star) sit in the XZ plane and need a much
 		# steeper tilt to face the icon camera.
-		mesh.rotation.x = TILT if effective.y > 0.01 else FLAT_TILT
+		visual.rotation.x = TILT if effective.y > 0.01 else FLAT_TILT
+
+	## Merged AABB of every mesh under the visual, in the visual's own space
+	## (child transforms applied, the visual's own transform excluded).
+	static func _visual_aabb(visual: Node3D) -> AABB:
+		var boxes: Array[AABB] = []
+		_collect_mesh_aabbs(visual, Transform3D.IDENTITY, boxes)
+		if boxes.is_empty():
+			return AABB()
+		var merged := boxes[0]
+		for i in range(1, boxes.size()):
+			merged = merged.merge(boxes[i])
+		return merged
+
+	static func _collect_mesh_aabbs(
+		node: Node3D, xform: Transform3D, boxes: Array[AABB]
+	) -> void:
+		var mesh := node as MeshInstance3D
+		if mesh and mesh.mesh:
+			boxes.append(xform * mesh.get_aabb())
+		for child in node.get_children():
+			if child is Node3D:
+				_collect_mesh_aabbs(child, xform * (child as Node3D).transform, boxes)
 
 
 const TARGET_INDICATOR_EDGE_PADDING: float = 36.0

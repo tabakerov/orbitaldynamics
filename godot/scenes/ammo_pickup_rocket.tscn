@@ -1,18 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ammo_pickup.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://crpptm28if3d6" path="res://assets/rocket.fbx" id="2"]
 
 [sub_resource type="SphereShape3D" id="collision_shape"]
 radius = 1.0
-
-[sub_resource type="BoxMesh" id="crate_mesh"]
-size = Vector3(0.8, 0.8, 0.8)
-
-[sub_resource type="StandardMaterial3D" id="crate_mat"]
-albedo_color = Color(1, 0.5, 0.15, 1)
-emission_enabled = true
-emission = Color(0.7, 0.25, 0.05, 1)
-emission_energy_multiplier = 1.5
 
 [node name="RocketAmmoPickup" type="Area3D"]
 script = ExtResource("1")
@@ -25,6 +17,13 @@ attracts_others = true
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("collision_shape")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-mesh = SubResource("crate_mesh")
-material_override = SubResource("crate_mat")
+[node name="Visual" type="Node3D" parent="."]
+
+[node name="Rocket1" parent="Visual" instance=ExtResource("2")]
+transform = Transform3D(0.27, 0, 0, 0, 0.27, 0, 0, 0, 0.27, 0, -0.6, 0.32)
+
+[node name="Rocket2" parent="Visual" instance=ExtResource("2")]
+transform = Transform3D(-0.135, 0, 0.23383, 0, 0.27, 0, -0.23383, 0, -0.135, -0.27713, -0.6, -0.16)
+
+[node name="Rocket3" parent="Visual" instance=ExtResource("2")]
+transform = Transform3D(-0.135, 0, -0.23383, 0, 0.27, 0, 0.23383, 0, -0.135, 0.27713, -0.6, -0.16)
