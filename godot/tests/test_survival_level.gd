@@ -38,6 +38,16 @@ func _test_structure_and_absorption_flow() -> void:
 		not (ship._modules.get(MountSlot.Binding.FRONT) is EngineModule),
 		"The front mount should carry the gun, not an engine.",
 	)
+	var weapon := ship.get_weapon_modules()[0]
+	assert(
+		weapon.current_type == WeaponProfile.AmmoType.ROCKET,
+		"The survival gun should start in rocket mode.",
+	)
+	assert(weapon.rocket_charges > 0, "The survival gun should start with rockets loaded.")
+	assert(
+		weapon.laser_charges == 0,
+		"Lasers on the survival level should come from pickups only.",
+	)
 	assert(level.get_score_tracker() != null, "Survival level should track score.")
 
 	var spawners := level.get_spawners()

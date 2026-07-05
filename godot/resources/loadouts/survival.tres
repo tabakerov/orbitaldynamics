@@ -4,7 +4,7 @@
 [ext_resource type="Resource" uid="uid://d3cyhkyluspmq" path="res://resources/hulls/rectangular.tres" id="2"]
 [ext_resource type="Resource" uid="uid://241lbhm3rveg" path="res://resources/engines/engine_standard.tres" id="3"]
 [ext_resource type="PackedScene" uid="uid://c1l3ex6x6qajf" path="res://scenes/engine.tscn" id="3_lkd1s"]
-[ext_resource type="Resource" path="res://resources/weapons/weapon_standard.tres" id="4"]
+[ext_resource type="Resource" path="res://resources/weapons/weapon_rockets.tres" id="4"]
 [ext_resource type="Script" uid="uid://cs61w530s1wng" path="res://scripts/engine_profile.gd" id="4_vdgv1"]
 
 [sub_resource type="Resource" id="Resource_ri3a6"]

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WeaponProfile" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon_profile.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/weapon.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/rocket.tscn" id="3"]
+
+[resource]
+script = ExtResource("1")
+module_scene = ExtResource("2")
+display_name = "Rocket Cannon"
+dry_mass = 0.0
+laser_range = 400.0
+laser_impulse = 35.0
+laser_cooldown = 0.35
+rocket_scene = ExtResource("3")
+rocket_cooldown = 0.6
+rocket_launch_speed = 3.0
+starting_type = 1
+starting_laser_charges = 0
+starting_rockets = 10
