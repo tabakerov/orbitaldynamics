@@ -120,14 +120,14 @@ entries = Array[ExtResource("7_entry")]([SubResource("entry_fuel"), SubResource(
 disc_radius = 31.97
 ring_inner_radius = 180.0
 ring_outer_radius = 200.0
-despawn_distance = 260.0
+despawn_distance = 2600.0
 
 [node name="AsteroidSpawner" type="Node3D" parent="." unique_id=902117744]
 script = ExtResource("6_spawner")
 entries = Array[ExtResource("7_entry")]([SubResource("entry_asteroid")])
 volume_shape = 3
 gravity_source = NodePath("../Planet")
-despawn_distance = 260.0
+despawn_distance = 2600.0
 
 [node name="ScoreTracker" type="Node" parent="." unique_id=1932522]
 script = ExtResource("8_score")
