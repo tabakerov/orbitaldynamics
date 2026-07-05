@@ -15,7 +15,7 @@ func _ready() -> void:
 	super()
 	var mesh_instance := $MeshInstance3D as MeshInstance3D
 	if mesh_instance and not mesh_instance.mesh:
-		mesh_instance.mesh = _build_star_mesh()
+		mesh_instance.mesh = build_star_mesh()
 
 
 func _process(delta: float) -> void:
@@ -29,7 +29,9 @@ func _on_ship_contact(_ship: Ship) -> void:
 	queue_free()
 
 
-func _build_star_mesh() -> ArrayMesh:
+# Static and public: the HUD collectible legend renders the same star for
+# its icon (the scene file itself carries no mesh).
+static func build_star_mesh() -> ArrayMesh:
 	var rim := PackedVector3Array()
 	for i in STAR_POINTS * 2:
 		var radius := OUTER_RADIUS if i % 2 == 0 else INNER_RADIUS

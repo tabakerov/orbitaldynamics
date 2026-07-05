@@ -37,7 +37,7 @@ class TargetIndicator:
 class Minimap:
 	extends Control
 
-	const MAP_SIZE := Vector2(184.0, 184.0)
+	const MAP_SIZE := Vector2(368.0, 368.0)
 	const MAP_MARGIN := 18.0
 	const MAP_PADDING := 18.0
 	const WORLD_PADDING := 35.0
@@ -246,6 +246,173 @@ class Minimap:
 		points.append(points[0])
 		draw_polyline(points, Color(0.02, 0.08, 0.1, 0.95), 1.5, true)
 
+class CollectibleLegend:
+	extends VBoxContainer
+
+	## Legend at the left edge of the screen: a live 3D miniature of every
+	## collectible type available in the current level, next to a short
+	## explanation of what it gives.
+
+	const ICON_SIZE := 52
+	const EDGE_MARGIN := 18.0
+	const LABEL_OUTLINE_COLOR := Color(0.02, 0.04, 0.08, 0.9)
+	const SPIN_SPEED := 1.1
+	const TILT := 0.45
+	const FLAT_TILT := 1.2
+
+	## One descriptor per collectible type; label colors match the minimap
+	## dot colors so the legend doubles as a map key.
+	const ENTRIES: Array[Dictionary] = [
+		{
+			"scene": preload("res://scenes/fuel_pickup.tscn"),
+			"text": "Топливо — пополняет бак",
+			"color": Minimap.FUEL_COLOR,
+		},
+		{
+			"scene": preload("res://scenes/ammo_pickup_laser.tscn"),
+			"text": "Заряды лазера — боезапас",
+			"color": Minimap.LASER_AMMO_COLOR,
+		},
+		{
+			"scene": preload("res://scenes/ammo_pickup_rocket.tscn"),
+			"text": "Ракеты — боезапас",
+			"color": Minimap.ROCKET_AMMO_COLOR,
+		},
+		{
+			"scene": preload("res://scenes/bonus_star.tscn"),
+			"text": "Бонус-звезда — очки",
+			"color": Minimap.STAR_COLOR,
+		},
+	]
+
+	var _icon_meshes: Array[MeshInstance3D] = []
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		anchor_left = 0.0
+		anchor_right = 0.0
+		anchor_top = 0.5
+		anchor_bottom = 0.5
+		add_theme_constant_override("separation", 6)
+
+	func setup(level: Level) -> void:
+		# Immediate free, not queue_free: stale rows would keep inflating the
+		# minimum size used to center the rebuilt legend below.
+		for child in get_children():
+			remove_child(child)
+			child.free()
+		_icon_meshes.clear()
+		visible = false
+		if not level or not is_instance_valid(level):
+			return
+		var available := _available_scene_paths(level)
+		for entry in ENTRIES:
+			var scene: PackedScene = entry["scene"]
+			if available.has(scene.resource_path):
+				_add_row(entry)
+		visible = get_child_count() > 0
+
+		# Pin the whole block to the left edge, vertically centered.
+		var min_size := get_combined_minimum_size()
+		offset_left = EDGE_MARGIN
+		offset_right = EDGE_MARGIN + min_size.x
+		offset_top = -min_size.y * 0.5
+		offset_bottom = offset_top + min_size.y
+
+	func _process(delta: float) -> void:
+		for mesh in _icon_meshes:
+			mesh.rotate_y(delta * SPIN_SPEED)
+
+	## Collectibles either sit in the level from the start or come out of a
+	## spawner later; both count as "available on this level".
+	func _available_scene_paths(level: Level) -> Dictionary:
+		var paths := {}
+		for object in level.get_floating_objects():
+			if not is_instance_valid(object):
+				continue
+			var scene_path := object.scene_file_path
+			if not scene_path.is_empty():
+				paths[scene_path] = true
+		for spawner in level.get_spawners():
+			for entry in spawner.entries:
+				if entry and entry.scene:
+					paths[entry.scene.resource_path] = true
+		return paths
+
+	func _add_row(entry: Dictionary) -> void:
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 10)
+		add_child(row)
+
+		row.add_child(_build_icon(entry["scene"]))
+
+		var label := Label.new()
+		label.text = entry["text"]
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_font_size_override("font_size", 16)
+		label.add_theme_color_override("font_color", entry["color"])
+		label.add_theme_color_override("font_outline_color", LABEL_OUTLINE_COLOR)
+		label.add_theme_constant_override("outline_size", 3)
+		row.add_child(label)
+
+	## The miniature is the pickup's real mesh rendered by a tiny transparent
+	## SubViewport with its own world, so the legend always shows the actual
+	## in-game model.
+	func _build_icon(scene: PackedScene) -> Control:
+		var container := SubViewportContainer.new()
+		container.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+		container.stretch = true
+		container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		var viewport := SubViewport.new()
+		viewport.transparent_bg = true
+		viewport.own_world_3d = true
+		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		container.add_child(viewport)
+
+		var camera := Camera3D.new()
+		camera.position = Vector3(0.0, 0.0, 2.2)
+		viewport.add_child(camera)
+
+		var light := DirectionalLight3D.new()
+		light.rotation_degrees = Vector3(-35.0, -30.0, 0.0)
+		viewport.add_child(light)
+
+		var mesh := _detach_mesh(scene)
+		if mesh:
+			if not mesh.mesh:
+				# The bonus star builds its mesh in _ready, which detached
+				# nodes never run.
+				mesh.mesh = BonusStar.build_star_mesh()
+			_fit_to_icon(mesh)
+			_icon_meshes.append(mesh)
+			viewport.add_child(mesh)
+		return container
+
+	## Instantiates the pickup without entering the tree (no _ready, so no
+	## gravity/score registration) and keeps only its mesh.
+	static func _detach_mesh(scene: PackedScene) -> MeshInstance3D:
+		var root := scene.instantiate()
+		var mesh := root.get_node_or_null("MeshInstance3D") as MeshInstance3D
+		if mesh:
+			root.remove_child(mesh)
+		root.free()
+		return mesh
+
+	static func _fit_to_icon(mesh: MeshInstance3D) -> void:
+		var aabb := mesh.get_aabb()
+		var effective := aabb.size * mesh.scale
+		var max_dim := maxf(effective.x, maxf(effective.y, effective.z))
+		if max_dim > 0.001:
+			mesh.scale *= 1.6 / max_dim
+		mesh.position = -aabb.get_center() * mesh.scale
+		# Flat meshes (the star) sit in the XZ plane and need a much
+		# steeper tilt to face the icon camera.
+		mesh.rotation.x = TILT if effective.y > 0.01 else FLAT_TILT
+
+
 const TARGET_INDICATOR_EDGE_PADDING: float = 36.0
 const TARGET_INDICATOR_DIRECTION_EPSILON: float = 0.001
 
@@ -257,6 +424,7 @@ var _target: Target
 var _level: Level
 var _target_indicator: TargetIndicator
 var _minimap: Minimap
+var _legend: CollectibleLegend
 var _dock_prompt: Label
 var _score_label: Label
 var _cheat_label: Label
@@ -278,6 +446,11 @@ func _ready() -> void:
 	_minimap.name = "Minimap"
 	_minimap.z_index = 5
 	add_child(_minimap)
+
+	_legend = CollectibleLegend.new()
+	_legend.name = "CollectibleLegend"
+	_legend.z_index = 5
+	add_child(_legend)
 
 	_dock_prompt = Label.new()
 	_dock_prompt.name = "DockPrompt"
@@ -387,6 +560,8 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_on_fuel_changed(ship.fuel, ship.max_fuel)
 	if _minimap:
 		_minimap.setup(_level, ship)
+	if _legend:
+		_legend.setup(_level)
 	_setup_score(_level.get_score_tracker() if _level else null)
 	_setup_ammo(ship)
 	_update_target_indicator()
