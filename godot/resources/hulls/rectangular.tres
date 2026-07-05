@@ -6,30 +6,30 @@
 
 [sub_resource type="BoxShape3D" id="hull_box"]
 margin = 0.0
-size = Vector3(1.5, 0.801, 1.5)
+size = Vector3(3, 1.602, 3)
 
 [sub_resource type="Resource" id="mount_front"]
 script = ExtResource("2")
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, -0.9)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, -1.8)
 
 [sub_resource type="Resource" id="mount_rear"]
 script = ExtResource("2")
 binding = 1
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.8)
 
 [sub_resource type="Resource" id="mount_left"]
 script = ExtResource("2")
 binding = 2
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
 
 [sub_resource type="Resource" id="mount_right"]
 script = ExtResource("2")
 binding = 3
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
 
 [resource]
 script = ExtResource("1")
 mesh = ExtResource("3")
 collision_shape = SubResource("hull_box")
-collision_transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0, 0.099609375, 0)
+collision_transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 0, 0.19921875, 0)
 mounts = Array[ExtResource("2")]([SubResource("mount_front"), SubResource("mount_rear"), SubResource("mount_left"), SubResource("mount_right")])

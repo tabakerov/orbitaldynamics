@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://crpptm28if3d6" path="res://assets/rocket.fbx" id="2"]
 
 [sub_resource type="SphereShape3D" id="collision_shape"]
-radius = 0.3
+radius = 0.6
 
 [sub_resource type="Gradient" id="color_ramp"]
 offsets = PackedFloat32Array(0, 0.4, 1)
@@ -16,8 +16,8 @@ gradient = SubResource("color_ramp")
 [sub_resource type="ParticleProcessMaterial" id="particle_mat"]
 direction = Vector3(0, 0, 1)
 spread = 12.0
-initial_velocity_min = 2.0
-initial_velocity_max = 4.0
+initial_velocity_min = 4.0
+initial_velocity_max = 8.0
 gravity = Vector3(0, 0, 0)
 scale_min = 0.5
 color = Color(1, 0.5, 0.1, 1)
@@ -34,7 +34,7 @@ particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="particle_mesh"]
 material = SubResource("particle_billboard_mat")
-size = Vector2(0.06, 0.06)
+size = Vector2(0.12, 0.12)
 
 [node name="Rocket" type="Area3D"]
 script = ExtResource("1")
@@ -44,10 +44,10 @@ mass = 2.0
 shape = SubResource("collision_shape")
 
 [node name="Model" parent="." instance=ExtResource("2")]
-transform = Transform3D(0.16, 0, 0, 0, 0, 0.16, 0, -0.16, 0, 0, 0, 0.356)
+transform = Transform3D(0.32, 0, 0, 0, 0, 0.32, 0, -0.32, 0, 0, 0, 0.712)
 
 [node name="ExhaustParticles" type="GPUParticles3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.8)
 emitting = false
 amount = 24
 lifetime = 0.3
@@ -55,8 +55,8 @@ process_material = SubResource("particle_mat")
 draw_pass_1 = SubResource("particle_mesh")
 
 [node name="BoostLight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0.8)
 light_color = Color(1, 0.4, 0.1, 1)
 light_energy = 0.6
-omni_range = 2.5
+omni_range = 5.0
 omni_attenuation = 1.5

@@ -95,15 +95,15 @@ func _test_cargo_shifts_center_of_mass() -> void:
 	loadout.front_module = StandardEngine
 	loadout.left_module = StandardEngine
 	loadout.right_module = StandardEngine
-	loadout.rear_module = LargeCrate  # 20 mass at rear (0, 0, 0.9)
+	loadout.rear_module = LargeCrate  # 20 mass at rear (0, 0, 1.8)
 
 	var ship := ShipScene.instantiate() as Ship
 	ship.loadout = loadout
 	add_child(ship)
 
-	# hull 10 at origin + 20 cargo at (0,0,0.9), all engines dry_mass=0
-	# expected CoM = (0, 0, 0.6)
-	var expected_z := 20.0 * 0.9 / (10.0 + 20.0)
+	# hull 10 at origin + 20 cargo at (0,0,1.8), all engines dry_mass=0
+	# expected CoM = (0, 0, 1.2)
+	var expected_z := 20.0 * 1.8 / (10.0 + 20.0)
 	assert(
 		is_equal_approx(ship.center_of_mass.z, expected_z),
 		"Cargo at rear should shift CoM to z=%f, got %f" % [expected_z, ship.center_of_mass.z],

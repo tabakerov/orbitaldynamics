@@ -27,8 +27,8 @@ gradient = SubResource("color_ramp")
 [sub_resource type="ParticleProcessMaterial" id="particle_mat"]
 direction = Vector3(0, 0, 1)
 spread = 15.0
-initial_velocity_min = 2.0
-initial_velocity_max = 4.0
+initial_velocity_min = 4.0
+initial_velocity_max = 8.0
 gravity = Vector3(0, 0, 0)
 scale_min = 0.5
 color = Color(1, 0.5, 0.1, 1)
@@ -45,31 +45,31 @@ particles_anim_loop = false
 
 [sub_resource type="QuadMesh" id="particle_mesh"]
 material = SubResource("particle_billboard_mat")
-size = Vector2(0.06, 0.06)
+size = Vector2(0.12, 0.12)
 
 [node name="Engine" type="Node3D" unique_id=165746692]
 script = ExtResource("1")
 
 [node name="Body" type="MeshInstance3D" parent="." unique_id=1964948209]
-transform = Transform3D(3.0447817, 0, 0, 0, 3.0447817, 0, 0, 0, 3.0447817, 0, 0, 0.47752494)
+transform = Transform3D(6.0895634, 0, 0, 0, 6.0895634, 0, 0, 0, 6.0895634, 0, 0, 0.95504988)
 material_override = SubResource("SubResource_2")
 mesh = SubResource("SubResource_1")
 
 [node name="Exhaust" type="MeshInstance3D" parent="." unique_id=255503724]
-transform = Transform3D(3.0447817, 0, 0, 0, 3.0447817, 0, 0, 0, 3.0447817, 0, 0, 1.0864813)
+transform = Transform3D(6.0895634, 0, 0, 0, 6.0895634, 0, 0, 0, 6.0895634, 0, 0, 2.1729626)
 visible = false
 material_override = SubResource("SubResource_4")
 mesh = SubResource("SubResource_3")
 
 [node name="ActiveLight" type="OmniLight3D" parent="." unique_id=732516813]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.29167172, 0.7501625)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58334344, 1.500325)
 light_color = Color(1, 0.2, 0.1, 1)
 light_energy = 0.5
-omni_range = 3.0
+omni_range = 6.0
 omni_attenuation = 1.5
 
 [node name="ExhaustParticles" type="GPUParticles3D" parent="." unique_id=354913164]
-transform = Transform3D(3.0447817, 0, 0, 0, 3.0447817, 0, 0, 0, 3.0447817, 0, 0, 1.0864813)
+transform = Transform3D(6.0895634, 0, 0, 0, 6.0895634, 0, 0, 0, 6.0895634, 0, 0, 2.1729626)
 emitting = false
 amount = 24
 lifetime = 0.4
