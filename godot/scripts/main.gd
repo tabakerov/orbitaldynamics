@@ -13,6 +13,8 @@ var _level_index: int = 0
 var _loading: bool = false
 var _crash_sequence: int = 0
 var _intro_sequence: int = 0
+var _intro_messages: PackedStringArray = []
+var _intro_message_index: int = 0
 var _intro_overlay: Control
 var _intro_message_label: Label
 var _intro_continue_btn: Button
@@ -438,38 +440,44 @@ func _hide_crash_overlay() -> void:
 
 
 func _show_intro_overlay(level: Level) -> void:
-	if not level or level.intro_message.strip_edges().is_empty():
+	var messages := level.get_intro_messages() if level else PackedStringArray()
+	if messages.is_empty():
 		_hide_intro_overlay()
 		return
 
+	_level_select.visible = false
+	_hide_crash_overlay()
+	_hide_completion_overlay()
+	_intro_messages = messages
+	_intro_message_index = 0
+	_intro_overlay.visible = true
+	get_tree().paused = true
+	_show_intro_message(level)
+
+
+func _show_intro_message(level: Level) -> void:
 	_intro_sequence += 1
 	var intro_sequence := _intro_sequence
-	var intro_level := level
 	var timeout := maxf(level.intro_timeout_seconds, 0.0)
 	var show_button := level.intro_show_continue_button or is_zero_approx(timeout)
 	var button_text := level.intro_continue_button_text.strip_edges()
 	if button_text.is_empty():
 		button_text = DEFAULT_INTRO_CONTINUE_TEXT
 
-	_level_select.visible = false
-	_hide_crash_overlay()
-	_hide_completion_overlay()
-	_intro_message_label.text = level.intro_message.strip_edges()
+	_intro_message_label.text = _intro_messages[_intro_message_index]
 	_intro_continue_btn.text = button_text
 	_intro_continue_btn.visible = show_button
 	_intro_continue_btn.disabled = not show_button
-	_intro_overlay.visible = true
 	if show_button:
 		_intro_continue_btn.call_deferred("grab_focus")
-	get_tree().paused = true
 
 	if timeout > 0.0:
 		await get_tree().create_timer(timeout, true).timeout
 		if intro_sequence != _intro_sequence:
 			return
-		if _current_level != intro_level or not _intro_overlay.visible:
+		if _current_level != level or not _intro_overlay.visible:
 			return
-		_on_intro_continue_requested()
+		_advance_intro()
 
 
 func _hide_intro_overlay() -> void:
@@ -507,6 +515,14 @@ func _cancel_crash_sequence() -> void:
 
 func _on_intro_continue_requested() -> void:
 	if _loading or not _intro_overlay or not _intro_overlay.visible:
+		return
+	_advance_intro()
+
+
+func _advance_intro() -> void:
+	_intro_message_index += 1
+	if _intro_message_index < _intro_messages.size() and _current_level:
+		_show_intro_message(_current_level)
 		return
 	_cancel_intro_sequence()
 	_hide_intro_overlay()

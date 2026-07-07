@@ -10,7 +10,7 @@
 
 [node name="Level015" type="Node3D"]
 script = ExtResource("1_lvl")
-intro_message = "У корабля груз в кормовом слоте вместо двигателя. Залети в фиолетовую станцию справа и нажми F (LB на геймпаде) — там можно поменять модули. Дотащи корабль до цели."
+intro_messages = Array[String](["У корабля груз в кормовом слоте вместо двигателя. Залети в фиолетовую станцию справа и нажми F (LB на геймпаде) — там можно поменять модули. Дотащи корабль до цели."])
 
 [node name="Ship" parent="." instance=ExtResource("2_ship")]
 loadout = ExtResource("3_loadout")

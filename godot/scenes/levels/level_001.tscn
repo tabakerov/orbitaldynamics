@@ -8,8 +8,8 @@
 
 [node name="Level01" type="Node3D" unique_id=1842903300]
 script = ExtResource("1")
-intro_message = "WASD выбирает двигатели корабля. Пробел - включает выбранные двигатели.
-Доберитесь до жёлтой цели; если она за экраном, следуйте указателю у края."
+intro_messages = Array[String](["WASD выбирает двигатели корабля. Пробел - включает выбранные двигатели.
+Доберитесь до жёлтой цели; если она за экраном, следуйте указателю у края."])
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("4")]
 loadout = ExtResource("5")

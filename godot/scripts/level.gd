@@ -5,7 +5,8 @@ signal level_completed
 signal ship_crashed(crash_position: Vector3)
 
 @export_group("Intro")
-@export_multiline var intro_message: String = ""
+## Показываются по очереди: каждое сообщение ждёт "Продолжить" (или таймаут).
+@export_multiline var intro_messages: Array[String] = []
 @export_range(0.0, 60.0, 0.1, "or_greater") var intro_timeout_seconds: float = 0.0
 @export var intro_show_continue_button: bool = true
 @export var intro_continue_button_text: String = "Продолжить"
@@ -69,6 +70,16 @@ func _connect_targets() -> void:
 	for child in get_children():
 		if child is Target:
 			child.target_reached.connect(func() -> void: level_completed.emit())
+
+
+## Непустые интро-сообщения без краевых пробелов, в порядке показа.
+func get_intro_messages() -> PackedStringArray:
+	var result := PackedStringArray()
+	for message in intro_messages:
+		var text := message.strip_edges()
+		if not text.is_empty():
+			result.append(text)
+	return result
 
 
 func get_ship() -> Ship:

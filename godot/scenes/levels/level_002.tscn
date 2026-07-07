@@ -8,7 +8,7 @@
 
 [node name="Level01" type="Node3D" unique_id=1842903300]
 script = ExtResource("1_c0eio")
-intro_message = "Q/E - поворачивают выбранные двигатели"
+intro_messages = Array[String](["Q/E - поворачивают выбранные двигатели"])
 
 [node name="Ship" parent="." unique_id=507982834 instance=ExtResource("2_a34f6")]
 loadout = ExtResource("3_2460i")
