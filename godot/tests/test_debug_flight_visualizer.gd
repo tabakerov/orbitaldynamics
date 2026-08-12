@@ -18,19 +18,17 @@ func _ready() -> void:
 func _test_ship_reports_active_thrust_samples() -> void:
 	var ship := _make_ship()
 
-	Input.action_press("mount_front")
-	Input.action_press("thrust")
+	Input.action_press("thrust_left")
 	Input.flush_buffered_events()
 	ship._update_module_inputs()
 
 	var samples := ship.get_debug_thrust_force_samples()
-	assert(samples.size() == 1, "One active mount should produce one thrust debug sample.")
+	assert(samples.size() == 1, "One active engine should produce one thrust debug sample.")
 	var force := samples[0]["force"] as Vector3
 	assert(absf(force.length() - 100.0) < 0.01, "Standard engine thrust sample should be 100.")
 	print("  PASS: ship reports active thrust samples")
 
-	Input.action_release("mount_front")
-	Input.action_release("thrust")
+	Input.action_release("thrust_left")
 	Input.flush_buffered_events()
 	ship.queue_free()
 	await get_tree().process_frame

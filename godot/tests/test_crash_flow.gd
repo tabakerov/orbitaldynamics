@@ -47,12 +47,11 @@ func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 	add_child(ship)
 	ship.fuel = 0.0
 
-	Input.action_press("mount_front")
-	Input.action_press("thrust")
+	Input.action_press("thrust_left")
 	ship._update_module_inputs()
 
-	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
-	assert(module != null, "Front engine module should exist after loadout spawn.")
+	var module := ship._modules[MountSlot.Binding.LEFT] as EngineModule
+	assert(module != null, "Left engine module should exist after loadout spawn.")
 	assert(
 		module.active,
 		"Module should remain active when fuel is empty (visual indicator per spec §3.4).",
@@ -72,8 +71,7 @@ func _test_ship_engines_produce_no_thrust_without_fuel() -> void:
 	assert(not module._exhaust.visible, "Engine exhaust mesh should hide without fuel.")
 	print("  PASS: ship engines produce no thrust without fuel")
 
-	Input.action_release("mount_front")
-	Input.action_release("thrust")
+	Input.action_release("thrust_left")
 	ship.queue_free()
 
 
@@ -83,9 +81,8 @@ func _test_engine_effects_stop_after_multi_engine_burnout() -> void:
 	add_child(ship)
 	ship.fuel = 2.0
 
-	Input.action_press("mount_front")
-	Input.action_press("mount_rear")
-	Input.action_press("thrust")
+	Input.action_press("thrust_left")
+	Input.action_press("thrust_right")
 	ship._update_module_inputs()
 
 	# Burn the tank dry across several engines: summed per-module drains used
@@ -100,7 +97,7 @@ func _test_engine_effects_stop_after_multi_engine_burnout() -> void:
 		"Fuel must reach exactly zero after burnout. Got: %s" % str(ship.fuel),
 	)
 
-	var module := ship._modules[MountSlot.Binding.REAR] as EngineModule
+	var module := ship._modules[MountSlot.Binding.RIGHT] as EngineModule
 	module._process(0.0)
 	assert(not module._particles.emitting, "Engine particles must stop once the tank is empty.")
 	assert(not module._exhaust.visible, "Engine exhaust must hide once the tank is empty.")
@@ -110,9 +107,8 @@ func _test_engine_effects_stop_after_multi_engine_burnout() -> void:
 	)
 	print("  PASS: engine effects stop after multi-engine burnout")
 
-	Input.action_release("mount_front")
-	Input.action_release("mount_rear")
-	Input.action_release("thrust")
+	Input.action_release("thrust_left")
+	Input.action_release("thrust_right")
 	ship.queue_free()
 
 
@@ -122,7 +118,7 @@ func _test_ship_scales_thrust_to_available_fuel() -> void:
 	add_child(ship)
 	ship.fuel = 1.0
 
-	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
+	var module := ship._modules[MountSlot.Binding.LEFT] as EngineModule
 	module.active = true
 	module.intensity = 1.0
 

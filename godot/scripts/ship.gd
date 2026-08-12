@@ -5,9 +5,14 @@ const FUEL_UNIT_MASS: float = 0.02
 ## Below this the tank is considered empty: summing per-module drains leaves
 ## float residue (~1e-16) that must not keep engines "supplied" forever.
 const FUEL_EPSILON: float = 0.001
-const STICK_DEADZONE: float = 0.2
-const GIMBAL_KEYBOARD_SPEED: float = 2.0
-const GIMBAL_STICK_SENSITIVITY: float = 0.10
+## The two engine mounts and the actions that drive them: each side runs off
+## its own analog trigger, and the matching bumper flips that engine into
+## reverse. Mounts absent here (front, rear) carry weapons and auxiliary gear
+## and are activated by their own mount button instead.
+const ENGINE_CONTROLS: Dictionary = {
+	MountSlot.Binding.LEFT: ["thrust_left", "reverse_left"],
+	MountSlot.Binding.RIGHT: ["thrust_right", "reverse_right"],
+}
 
 @export var loadout: ShipLoadout
 @export var starting_fuel_override: float = -1.0
@@ -21,8 +26,6 @@ var max_fuel: float
 var _modules: Dictionary = {}
 var _mount_nodes: Dictionary = {}
 var _hull_dry_mass: float = 10.0
-var _prev_stick_angle: float = 0.0
-var _stick_active: bool = false
 var _crashed: bool = false
 
 
@@ -114,7 +117,6 @@ func _physics_process(delta: float) -> void:
 	if _crashed:
 		return
 	_update_module_inputs()
-	_update_gimbal(delta)
 	for module: ShipModule in _modules.values():
 		module.physics_tick(delta)
 	_prepare_fuel_flow(delta)
@@ -125,39 +127,22 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_module_inputs() -> void:
-	var intensity := Input.get_action_strength("thrust")
 	for binding: int in _modules:
 		var module: ShipModule = _modules[binding]
-		var action_name := "mount_" + MountSlot.binding_name(binding)
-		module.active = Input.is_action_pressed(action_name)
-		module.intensity = intensity
-
-
-func _update_gimbal(delta: float) -> void:
-	var gimbal_delta := 0.0
-
-	if Input.is_action_pressed("gimbal_cw"):
-		gimbal_delta += GIMBAL_KEYBOARD_SPEED * delta
-	if Input.is_action_pressed("gimbal_ccw"):
-		gimbal_delta -= GIMBAL_KEYBOARD_SPEED * delta
-
-	var stick := Vector2(
-		Input.get_joy_axis(0, JOY_AXIS_LEFT_X),
-		Input.get_joy_axis(0, JOY_AXIS_LEFT_Y),
-	)
-	if stick.length() > STICK_DEADZONE:
-		var stick_angle := atan2(stick.x, -stick.y)
-		if _stick_active:
-			var angle_delta := stick_angle - _prev_stick_angle
-			angle_delta = fposmod(angle_delta + PI, TAU) - PI
-			gimbal_delta += angle_delta * GIMBAL_STICK_SENSITIVITY
-		_prev_stick_angle = stick_angle
-		_stick_active = true
-	else:
-		_stick_active = false
-
-	for module: ShipModule in _modules.values():
-		module.apply_gimbal_delta(gimbal_delta)
+		var controls: Array = ENGINE_CONTROLS.get(binding, [])
+		if module is EngineModule and not controls.is_empty():
+			var engine := module as EngineModule
+			engine.intensity = Input.get_action_strength(controls[0])
+			engine.active = engine.intensity > 0.0
+			engine.reversed = Input.is_action_pressed(controls[1])
+		else:
+			# Front and rear mounts run straight off their own button — there is
+			# no separate intensity trigger any more. This also covers an engine
+			# swapped onto one of them at a station: it burns at full thrust
+			# instead of becoming dead weight.
+			var action := "mount_" + MountSlot.binding_name(binding)
+			module.active = InputMap.has_action(action) and Input.is_action_pressed(action)
+			module.intensity = 1.0 if module.active else 0.0
 
 
 func _apply_engine_forces() -> void:

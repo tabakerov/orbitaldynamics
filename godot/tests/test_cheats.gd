@@ -99,7 +99,7 @@ func _test_cheats_peg_fuel_to_max() -> void:
 	add_child(ship)
 	ship.fuel = 0.0
 
-	var module := ship._modules[MountSlot.Binding.FRONT] as EngineModule
+	var module := ship._modules[MountSlot.Binding.LEFT] as EngineModule
 	module.active = true
 	module.intensity = 1.0
 

@@ -386,6 +386,6 @@ func _is_action_just_pressed(action_name: StringName) -> bool:
 
 func _refresh_help() -> void:
 	if _state == State.PICK_MOUNT:
-		_help_label.text = "↑↓←→ — выбор слота · A/Enter — поменять модуль · LB/B/Esc — закрыть"
+		_help_label.text = "↑↓←→ — выбор слота · A/Enter — поменять модуль · L3/B/Esc — закрыть"
 	else:
 		_help_label.text = "↑↓ — выбор модуля · A/Enter — установить · B/Esc — назад"

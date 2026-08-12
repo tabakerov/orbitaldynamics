@@ -107,19 +107,19 @@ func _test_loadout_is_duplicated_so_swaps_dont_bleed_across_ships() -> void:
 	var ship_a := ShipScene.instantiate() as Ship
 	ship_a.loadout = DefaultLoadout
 	add_child(ship_a)
-	ship_a.apply_loadout_change(MountSlot.Binding.FRONT, LargeCrate)
+	ship_a.apply_loadout_change(MountSlot.Binding.LEFT, LargeCrate)
 
 	var ship_b := ShipScene.instantiate() as Ship
 	ship_b.loadout = DefaultLoadout
 	add_child(ship_b)
 
 	assert(
-		ship_b.loadout.front_module == StandardEngine,
-		"Second ship's front_module should still be standard engine — DefaultLoadout must not have been mutated",
+		ship_b.loadout.left_module == StandardEngine,
+		"Second ship's left_module should still be standard engine — DefaultLoadout must not have been mutated",
 	)
 	assert(
-		ship_a.loadout.front_module == LargeCrate,
-		"First ship's front_module should be LargeCrate after swap",
+		ship_a.loadout.left_module == LargeCrate,
+		"First ship's left_module should be LargeCrate after swap",
 	)
 	print("  PASS: loadout is per-ship via duplicate()")
 

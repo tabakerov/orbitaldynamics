@@ -44,7 +44,3 @@ func get_potential_fuel_intake(_delta: float) -> float:
 
 func commit_fuel_intake(_amount: float) -> void:
 	pass
-
-
-func apply_gimbal_delta(_delta: float) -> void:
-	pass

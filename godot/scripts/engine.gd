@@ -1,29 +1,32 @@
 class_name EngineModule
 extends ShipModule
 
-var gimbal_angle: float = 0.0
-var _gimbal_range_rad: float = deg_to_rad(30.0)
+## Set by the ship when the engine's bumper is held: thrust leaves the nozzle
+## the other way, so the ship is pushed in the opposite direction.
+var reversed: bool = false
 
 @onready var _exhaust: MeshInstance3D = $Exhaust
 @onready var _active_light: OmniLight3D = $ActiveLight
 @onready var _particles: GPUParticles3D = $ExhaustParticles
 
-
-func _configure() -> void:
-	var ep := profile as EngineProfile
-	if ep:
-		_gimbal_range_rad = deg_to_rad(ep.gimbal_range_deg)
+## Nozzle-side visuals with their forward-facing rest transforms, swapped to
+## the other side of the mount while the engine runs in reverse.
+var _nozzle_visuals: Array = []
+var _visuals_reversed: bool = false
 
 
 func _ready() -> void:
 	if _active_light:
 		_active_light.visible = false
-	rotation.y = gimbal_angle
+	for node: Node3D in [_exhaust, _active_light, _particles]:
+		if node:
+			_nozzle_visuals.append([node, node.transform])
 
 
 func _process(_delta: float) -> void:
 	if not _exhaust:
 		return
+	_sync_nozzle_direction()
 	var has_fuel := _has_effective_fuel_supply()
 	var thrusting: bool = active and intensity > 0.0 and has_fuel
 	_exhaust.visible = thrusting
@@ -36,10 +39,15 @@ func get_mass() -> float:
 	return ep.dry_mass if ep else 0.0
 
 
-func apply_gimbal_delta(delta: float) -> void:
-	if active and delta != 0.0:
-		gimbal_angle = clampf(gimbal_angle + delta, -_gimbal_range_rad, _gimbal_range_rad)
-		rotation.y = gimbal_angle
+func _sync_nozzle_direction() -> void:
+	if reversed == _visuals_reversed:
+		return
+	_visuals_reversed = reversed
+	var flip := Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	for entry: Array in _nozzle_visuals:
+		var node: Node3D = entry[0]
+		var rest: Transform3D = entry[1]
+		node.transform = flip * rest if reversed else rest
 
 
 func get_thrust_vector() -> Vector3:
@@ -50,7 +58,11 @@ func get_thrust_vector() -> Vector3:
 	var ep := profile as EngineProfile
 	if not ep:
 		return Vector3.ZERO
-	return -global_transform.basis.z * ep.max_thrust * intensity * fuel_supply_ratio
+	# Exhaust leaves along local +Z, so thrust pushes along -Z — and the other
+	# way round in reverse.
+	var nozzle := global_transform.basis.z
+	var direction := nozzle if reversed else -nozzle
+	return direction * ep.max_thrust * intensity * fuel_supply_ratio
 
 
 func get_requested_fuel_drain(delta: float) -> float:

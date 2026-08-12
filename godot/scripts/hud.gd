@@ -569,7 +569,7 @@ func _ready() -> void:
 func show_dock_prompt(station_name: String = "станции") -> void:
 	if not _dock_prompt:
 		return
-	_dock_prompt.text = "F · LB — стыковка с %s" % station_name
+	_dock_prompt.text = "F · L3 — стыковка с %s" % station_name
 	_dock_prompt.visible = true
 
 

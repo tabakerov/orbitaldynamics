@@ -2,7 +2,7 @@ extends Node
 
 const ShipScene = preload("res://scenes/ship.tscn")
 const DefaultLoadout = preload("res://resources/loadouts/default.tres")
-const TutorialRearOnly = preload("res://resources/loadouts/tutorial_rear_only.tres")
+const TutorialBasic = preload("res://resources/loadouts/tutorial_basic.tres")
 const RectangularHull = preload("res://resources/hulls/rectangular.tres")
 const StandardEngine = preload("res://resources/engines/engine_standard.tres")
 const LargeCrate = preload("res://resources/cargo/crate_large.tres")
@@ -10,8 +10,8 @@ const BasicTank = preload("res://resources/fuel_tanks/tank_basic.tres")
 
 
 func _ready() -> void:
-	_test_default_loadout_spawns_four_engines()
-	_test_tutorial_rear_only_spawns_one_engine()
+	_test_default_loadout_spawns_two_engines()
+	_test_tutorial_loadout_leaves_front_and_rear_empty()
 	_test_starting_fuel_override()
 	_test_recalculated_mass_includes_fuel()
 	_test_cargo_shifts_center_of_mass()
@@ -22,38 +22,35 @@ func _ready() -> void:
 	get_tree().quit()
 
 
-func _test_default_loadout_spawns_four_engines() -> void:
+func _test_default_loadout_spawns_two_engines() -> void:
 	var ship := ShipScene.instantiate() as Ship
 	ship.loadout = DefaultLoadout
 	add_child(ship)
 
-	assert(ship._modules.size() == 4, "Default loadout should spawn 4 modules, got %d" % ship._modules.size())
-	for binding in [
-		MountSlot.Binding.FRONT,
-		MountSlot.Binding.REAR,
-		MountSlot.Binding.LEFT,
-		MountSlot.Binding.RIGHT,
-	]:
+	assert(ship._modules.size() == 2, "Default loadout should spawn 2 modules, got %d" % ship._modules.size())
+	for binding in [MountSlot.Binding.LEFT, MountSlot.Binding.RIGHT]:
 		var module: ShipModule = ship._modules.get(binding)
 		assert(module != null, "Module missing for binding %d" % binding)
 		assert(module is EngineModule, "Module at binding %d should be EngineModule" % binding)
 	assert(ship.fuel == 200.0, "Default loadout starting fuel should be 200, got %f" % ship.fuel)
 	assert(ship.max_fuel == 200.0, "Default loadout max fuel should be 200, got %f" % ship.max_fuel)
-	print("  PASS: default loadout spawns four engines")
+	print("  PASS: default loadout spawns two side engines")
 
 	ship.queue_free()
 
 
-func _test_tutorial_rear_only_spawns_one_engine() -> void:
+func _test_tutorial_loadout_leaves_front_and_rear_empty() -> void:
 	var ship := ShipScene.instantiate() as Ship
-	ship.loadout = TutorialRearOnly
+	ship.loadout = TutorialBasic
 	add_child(ship)
 
-	assert(ship._modules.size() == 1, "Tutorial loadout should spawn 1 module, got %d" % ship._modules.size())
-	assert(ship._modules.has(MountSlot.Binding.REAR), "Rear slot should be occupied")
+	assert(ship._modules.size() == 2, "Tutorial loadout should spawn 2 modules, got %d" % ship._modules.size())
+	assert(ship._modules.has(MountSlot.Binding.LEFT), "Left slot should be occupied")
+	assert(ship._modules.has(MountSlot.Binding.RIGHT), "Right slot should be occupied")
 	assert(not ship._modules.has(MountSlot.Binding.FRONT), "Front slot should be empty")
+	assert(not ship._modules.has(MountSlot.Binding.REAR), "Rear slot should be empty")
 	assert(ship.fuel == 10.0, "Tutorial starting fuel should be 10, got %f" % ship.fuel)
-	print("  PASS: tutorial_rear_only spawns one engine")
+	print("  PASS: tutorial loadout spawns only the two side engines")
 
 	ship.queue_free()
 
