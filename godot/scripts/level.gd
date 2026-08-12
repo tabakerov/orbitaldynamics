@@ -3,6 +3,15 @@ extends Node3D
 
 signal level_completed
 signal ship_crashed(crash_position: Vector3)
+## Корабль остался без топлива и перестал приближаться к цели — лететь дальше
+## уже не на чем. HUD показывает по этому сигналу выход: рестарт или меню.
+signal stranded_changed(stranded: bool)
+
+## Сколько корабль должен не приближаться к цели, чтобы полёт считался
+## безнадёжным. Достаточно долго, чтобы не срабатывать на инерционном манёвре.
+const STRANDED_NO_PROGRESS_SECONDS: float = 3.0
+## Приближение меньше этого — не прогресс, а дрожание чисел.
+const STRANDED_PROGRESS_EPSILON: float = 0.05
 
 @export_group("Intro")
 ## Показываются по очереди: каждое сообщение ждёт "Продолжить" (или таймаут).
@@ -15,6 +24,9 @@ signal ship_crashed(crash_position: Vector3)
 @export var debug_visuals_enabled: bool = false
 
 var _debug_visualizer: DebugFlightVisualizer
+var _stranded: bool = false
+var _stranded_no_progress_seconds: float = 0.0
+var _closest_target_distance: float = INF
 
 
 func _ready() -> void:
@@ -22,6 +34,52 @@ func _ready() -> void:
 	_connect_ship()
 	_connect_targets()
 	_setup_debug_visualizer()
+
+
+func _process(delta: float) -> void:
+	var stranded := _is_ship_stranded(delta)
+	if stranded == _stranded:
+		return
+	_stranded = stranded
+	stranded_changed.emit(stranded)
+
+
+## Безнадёжен полёт или ещё нет. Два условия: топлива взять негде и корабль за
+## последние STRANDED_NO_PROGRESS_SECONDS ни разу не подошёл к цели ближе, чем
+## подходил раньше. Пустой бак сам по себе ничего не значит — корабль может
+## как раз лететь к цели по инерции, и мешать ему подсказкой не надо.
+func _is_ship_stranded(delta: float) -> bool:
+	var ship := get_ship()
+	var target := get_target()
+	if not ship or not is_instance_valid(ship) or ship.is_crashed():
+		return false
+	if not target or not is_instance_valid(target):
+		return false
+
+	if _has_fuel_within_reach(ship):
+		# Отсчёт идёт ровно с того момента, как лететь стало не на чем.
+		_stranded_no_progress_seconds = 0.0
+		_closest_target_distance = INF
+		return false
+
+	var distance := ship.global_position.distance_to(target.global_position)
+	if distance < _closest_target_distance - STRANDED_PROGRESS_EPSILON:
+		_closest_target_distance = distance
+		_stranded_no_progress_seconds = 0.0
+		return false
+
+	_closest_target_distance = minf(_closest_target_distance, distance)
+	_stranded_no_progress_seconds += delta
+	return _stranded_no_progress_seconds >= STRANDED_NO_PROGRESS_SECONDS
+
+
+## Топливо в баках корабля либо пикап, до которого он ещё может долететь.
+func _has_fuel_within_reach(ship: Ship) -> bool:
+	if Cheats.enabled:
+		return true
+	if ship.get_reachable_fuel() > Ship.FUEL_EPSILON:
+		return true
+	return not get_fuel_pickups().is_empty()
 
 
 func _unhandled_input(event: InputEvent) -> void:

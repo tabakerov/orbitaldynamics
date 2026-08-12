@@ -294,6 +294,20 @@ func get_engine_module(binding: int) -> EngineModule:
 	return _modules.get(binding) as EngineModule
 
 
+## Fuel the ship can still burn without finding more: the internal tank plus
+## whatever is left in the external tanks it carries.
+func get_reachable_fuel() -> float:
+	var total := fuel
+	for module: ShipModule in _modules.values():
+		if module is ExternalFuelTankModule:
+			total += (module as ExternalFuelTankModule).current_fuel
+	return total
+
+
+func is_crashed() -> bool:
+	return _crashed
+
+
 func get_weapon_modules() -> Array[WeaponModule]:
 	var result: Array[WeaponModule] = []
 	for module: ShipModule in _modules.values():

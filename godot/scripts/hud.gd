@@ -649,6 +649,7 @@ var _legend: CollectibleLegend
 var _throttle_left: ThrottleGauge
 var _throttle_right: ThrottleGauge
 var _dock_prompt: Label
+var _stranded_prompt: VBoxContainer
 var _score_label: Label
 var _cheat_label: Label
 var _camera_hint: Label
@@ -705,6 +706,8 @@ func _ready() -> void:
 	_dock_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dock_prompt.z_index = 10
 	add_child(_dock_prompt)
+
+	_setup_stranded_prompt()
 
 	_score_label = Label.new()
 	_score_label.name = "ScoreLabel"
@@ -776,6 +779,56 @@ func _ready() -> void:
 	add_child(_ammo_label)
 
 
+## Sits below the ship, out of the way of the dock prompt at the top. Shown
+## only when the level has decided the flight is unrecoverable, so it can
+## afford to be loud.
+func _setup_stranded_prompt() -> void:
+	_stranded_prompt = VBoxContainer.new()
+	_stranded_prompt.name = "StrandedPrompt"
+	_stranded_prompt.anchor_left = 0.5
+	_stranded_prompt.anchor_right = 0.5
+	_stranded_prompt.anchor_top = 0.62
+	_stranded_prompt.anchor_bottom = 0.62
+	_stranded_prompt.offset_left = -400.0
+	_stranded_prompt.offset_right = 400.0
+	_stranded_prompt.offset_bottom = 100.0
+	_stranded_prompt.add_theme_constant_override("separation", 10)
+	_stranded_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stranded_prompt.visible = false
+	_stranded_prompt.z_index = 10
+	add_child(_stranded_prompt)
+
+	var title := Label.new()
+	title.text = "Топливо кончилось — до цели уже не дотянуть"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", Color(1.0, 0.45, 0.35, 1.0))
+	title.add_theme_color_override("font_outline_color", Color(0.08, 0.02, 0.02, 1.0))
+	title.add_theme_constant_override("outline_size", 5)
+	_stranded_prompt.add_child(title)
+
+	var hint := Label.new()
+	hint.text = "R · Start — перезапустить уровень      Esc · Back — выйти в меню"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint.add_theme_font_size_override("font_size", 22)
+	hint.add_theme_color_override("font_color", Color(0.9, 0.94, 1.0, 0.92))
+	hint.add_theme_color_override("font_outline_color", Color(0.02, 0.04, 0.08, 1.0))
+	hint.add_theme_constant_override("outline_size", 4)
+	_stranded_prompt.add_child(hint)
+
+
+func show_stranded_prompt() -> void:
+	if _stranded_prompt:
+		_stranded_prompt.visible = true
+
+
+func hide_stranded_prompt() -> void:
+	if _stranded_prompt:
+		_stranded_prompt.visible = false
+
+
 func show_dock_prompt(station_name: String = "станции") -> void:
 	if not _dock_prompt:
 		return
@@ -793,6 +846,7 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_target = target
 	_level = level
 	_ship = ship
+	hide_stranded_prompt()
 	ship.fuel_changed.connect(_on_fuel_changed)
 	_on_fuel_changed(ship.fuel, ship.max_fuel)
 	if _minimap:

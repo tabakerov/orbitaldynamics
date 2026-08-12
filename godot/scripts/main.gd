@@ -121,6 +121,7 @@ func _load_level(index: int) -> void:
 
 	_current_level.level_completed.connect(_on_level_completed)
 	_current_level.ship_crashed.connect(_on_ship_crashed)
+	_current_level.stranded_changed.connect(_on_stranded_changed)
 
 	var ship := _current_level.get_ship()
 	if ship:
@@ -168,6 +169,18 @@ func _on_ship_crashed(crash_position: Vector3) -> void:
 	if _current_level != crashed_level:
 		return
 	_show_crash_overlay()
+
+
+## The level decided the ship can no longer reach its target. Nothing is
+## forced — the keys the prompt names work anyway; it just makes sure a
+## stranded player knows they are there.
+func _on_stranded_changed(stranded: bool) -> void:
+	if not _hud:
+		return
+	if stranded:
+		_hud.show_stranded_prompt()
+	else:
+		_hud.hide_stranded_prompt()
 
 
 func _process(_delta: float) -> void:
