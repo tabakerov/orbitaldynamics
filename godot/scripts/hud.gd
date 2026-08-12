@@ -246,6 +246,199 @@ class Minimap:
 		points.append(points[0])
 		draw_polyline(points, Color(0.02, 0.08, 0.1, 0.95), 1.5, true)
 
+class ThrottleGauge:
+	extends Control
+
+	## Throttle quadrant pinned to a screen edge, one per side engine. The
+	## lever rides that side's trigger; the needle and the bar in the slot
+	## show the thrust the engine actually delivers. The gap between them is
+	## the engine's spool lag, made visible — that is the whole point of the
+	## instrument. The lamp underneath lights while the side runs in reverse.
+
+	const GAUGE_SIZE := Vector2(64.0, 300.0)
+	const EDGE_MARGIN := 14.0
+
+	const SLOT_CENTER_X := 26.0
+	const SLOT_HALF_WIDTH := 7.0
+	const SLOT_TOP := 18.0
+	const SLOT_BOTTOM := 236.0
+	const TICK_OUTER_X := 4.0
+	const TICK_MINOR_X := 8.0
+	const TICK_INNER_X := 13.0
+	const HANDLE_LEFT := 14.0
+	const HANDLE_RIGHT := 38.0
+	const HANDLE_HALF_HEIGHT := 6.5
+	const NEEDLE_TIP_X := 41.0
+	const NEEDLE_BASE_X := 55.0
+	const NEEDLE_HALF_HEIGHT := 7.0
+	const LAMP_CENTER_Y := 262.0
+	const LAMP_RADIUS := 10.0
+	const LAMP_LABEL_Y := 288.0
+	const LAMP_LABEL_FONT_SIZE := 12
+
+	const BACKGROUND_COLOR := Color(0.015, 0.025, 0.055, 0.72)
+	const BORDER_COLOR := Color(0.55, 0.72, 0.95, 0.42)
+	const SLOT_COLOR := Color(0.03, 0.05, 0.1, 0.92)
+	const TICK_COLOR := Color(0.62, 0.76, 0.95, 0.5)
+	const TICK_MAJOR_COLOR := Color(0.75, 0.87, 1.0, 0.85)
+	const FILL_FORWARD_COLOR := Color(0.35, 0.9, 1.0, 0.75)
+	const FILL_REVERSE_COLOR := Color(1.0, 0.55, 0.2, 0.75)
+	const HANDLE_COLOR := Color(0.82, 0.9, 1.0, 1.0)
+	const HANDLE_GRIP_COLOR := Color(0.13, 0.22, 0.36, 1.0)
+	const HANDLE_OUTLINE_COLOR := Color(0.02, 0.05, 0.1, 0.95)
+	const NEEDLE_COLOR := Color(1.0, 0.85, 0.3, 1.0)
+	const NEEDLE_OUTLINE_COLOR := Color(0.1, 0.07, 0.02, 0.9)
+	const LAMP_OFF_COLOR := Color(0.17, 0.09, 0.07, 0.9)
+	const LAMP_ON_COLOR := Color(1.0, 0.42, 0.18, 1.0)
+	const LAMP_RING_COLOR := Color(0.75, 0.45, 0.32, 0.55)
+	const LAMP_LABEL_OFF_COLOR := Color(0.55, 0.44, 0.4, 0.65)
+
+	## Mirrors the gauge horizontally for the right-hand side, so both levers
+	## keep their scales at the screen edge and their needles inboard.
+	var mirrored: bool = false
+
+	var _throttle: float = 0.0
+	var _thrust: float = 0.0
+	var _reversed: bool = false
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		custom_minimum_size = GAUGE_SIZE
+		size = GAUGE_SIZE
+		anchor_top = 0.5
+		anchor_bottom = 0.5
+		offset_top = -GAUGE_SIZE.y * 0.5
+		offset_bottom = GAUGE_SIZE.y * 0.5
+		if mirrored:
+			anchor_left = 1.0
+			anchor_right = 1.0
+			offset_left = -EDGE_MARGIN - GAUGE_SIZE.x
+			offset_right = -EDGE_MARGIN
+		else:
+			offset_left = EDGE_MARGIN
+			offset_right = EDGE_MARGIN + GAUGE_SIZE.x
+
+	## `throttle` is what the trigger asks for, `thrust` what the engine gives.
+	func set_readings(throttle: float, thrust: float, reversed: bool) -> void:
+		if (
+			is_equal_approx(_throttle, throttle)
+			and is_equal_approx(_thrust, thrust)
+			and _reversed == reversed
+		):
+			return
+		_throttle = throttle
+		_thrust = thrust
+		_reversed = reversed
+		queue_redraw()
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
+		draw_rect(Rect2(Vector2.ZERO, size), BORDER_COLOR, false, 1.5)
+		_draw_scale()
+		_draw_slot()
+		_draw_needle()
+		_draw_handle()
+		_draw_reverse_lamp()
+
+	func _draw_scale() -> void:
+		for step in range(0, 9):
+			var value := float(step) / 8.0
+			var major: bool = step % 2 == 0
+			var y := _value_y(value)
+			var from_x: float = TICK_OUTER_X if major else TICK_MINOR_X
+			draw_line(
+				Vector2(_x(from_x), y),
+				Vector2(_x(TICK_INNER_X), y),
+				TICK_MAJOR_COLOR if major else TICK_COLOR,
+				2.0 if major else 1.0,
+			)
+
+	func _draw_slot() -> void:
+		draw_rect(
+			_span(
+				SLOT_CENTER_X - SLOT_HALF_WIDTH,
+				SLOT_CENTER_X + SLOT_HALF_WIDTH,
+				SLOT_TOP,
+				SLOT_BOTTOM,
+			),
+			SLOT_COLOR,
+			true,
+		)
+		var thrust_y := _value_y(_thrust)
+		if thrust_y < SLOT_BOTTOM:
+			draw_rect(
+				_span(
+					SLOT_CENTER_X - SLOT_HALF_WIDTH + 2.0,
+					SLOT_CENTER_X + SLOT_HALF_WIDTH - 2.0,
+					thrust_y,
+					SLOT_BOTTOM,
+				),
+				FILL_REVERSE_COLOR if _reversed else FILL_FORWARD_COLOR,
+				true,
+			)
+
+	## Arrow on the inboard side pointing at the slot: actual thrust, the
+	## value the pilot flies by.
+	func _draw_needle() -> void:
+		var y := _value_y(_thrust)
+		var points := PackedVector2Array([
+			Vector2(_x(NEEDLE_TIP_X), y),
+			Vector2(_x(NEEDLE_BASE_X), y - NEEDLE_HALF_HEIGHT),
+			Vector2(_x(NEEDLE_BASE_X), y + NEEDLE_HALF_HEIGHT),
+		])
+		draw_colored_polygon(points, NEEDLE_COLOR)
+		var outline := PackedVector2Array(points)
+		outline.append(points[0])
+		draw_polyline(outline, NEEDLE_OUTLINE_COLOR, 1.5, true)
+
+	## The lever itself: sits exactly where the trigger is pressed.
+	func _draw_handle() -> void:
+		var y := _value_y(_throttle)
+		var rect := _span(HANDLE_LEFT, HANDLE_RIGHT, y - HANDLE_HALF_HEIGHT, y + HANDLE_HALF_HEIGHT)
+		draw_rect(rect, HANDLE_COLOR, true)
+		draw_rect(rect, HANDLE_OUTLINE_COLOR, false, 1.5)
+		draw_line(
+			Vector2(rect.position.x + 3.0, y),
+			Vector2(rect.end.x - 3.0, y),
+			HANDLE_GRIP_COLOR,
+			1.5,
+		)
+
+	func _draw_reverse_lamp() -> void:
+		var center := Vector2(size.x * 0.5, LAMP_CENTER_Y)
+		draw_circle(center, LAMP_RADIUS, LAMP_ON_COLOR if _reversed else LAMP_OFF_COLOR)
+		draw_arc(center, LAMP_RADIUS + 1.5, 0.0, TAU, 24, LAMP_RING_COLOR, 1.5)
+		if _reversed:
+			draw_arc(center, LAMP_RADIUS + 4.5, 0.0, TAU, 24, Color(LAMP_ON_COLOR, 0.45), 2.5)
+
+		var font := get_theme_default_font()
+		if not font:
+			return
+		var label := "REV"
+		var width := font.get_string_size(
+			label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LAMP_LABEL_FONT_SIZE
+		).x
+		draw_string(
+			font,
+			Vector2(size.x * 0.5 - width * 0.5, LAMP_LABEL_Y),
+			label,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0,
+			LAMP_LABEL_FONT_SIZE,
+			LAMP_ON_COLOR if _reversed else LAMP_LABEL_OFF_COLOR,
+		)
+
+	func _value_y(value: float) -> float:
+		return SLOT_BOTTOM - clampf(value, 0.0, 1.0) * (SLOT_BOTTOM - SLOT_TOP)
+
+	func _x(local_x: float) -> float:
+		return size.x - local_x if mirrored else local_x
+
+	func _span(x_from: float, x_to: float, y_from: float, y_to: float) -> Rect2:
+		var a := _x(x_from)
+		var b := _x(x_to)
+		return Rect2(Vector2(minf(a, b), y_from), Vector2(absf(b - a), y_to - y_from))
+
 class CollectibleLegend:
 	extends VBoxContainer
 
@@ -254,7 +447,8 @@ class CollectibleLegend:
 	## explanation of what it gives.
 
 	const ICON_SIZE := 52
-	const EDGE_MARGIN := 18.0
+	## Clears the left throttle lever, which owns the screen edge.
+	const EDGE_MARGIN := ThrottleGauge.EDGE_MARGIN + ThrottleGauge.GAUGE_SIZE.x + 16.0
 	const LABEL_OUTLINE_COLOR := Color(0.02, 0.04, 0.08, 0.9)
 	const SPIN_SPEED := 1.1
 	const TILT := 0.45
@@ -448,9 +642,12 @@ const AMMO_ROCKET_FONT_COLOR := Color(1.0, 0.6, 0.25, 1.0)
 var _camera: Camera3D
 var _target: Target
 var _level: Level
+var _ship: Ship
 var _target_indicator: TargetIndicator
 var _minimap: Minimap
 var _legend: CollectibleLegend
+var _throttle_left: ThrottleGauge
+var _throttle_right: ThrottleGauge
 var _dock_prompt: Label
 var _score_label: Label
 var _cheat_label: Label
@@ -477,6 +674,19 @@ func _ready() -> void:
 	_legend.name = "CollectibleLegend"
 	_legend.z_index = 5
 	add_child(_legend)
+
+	_throttle_left = ThrottleGauge.new()
+	_throttle_left.name = "ThrottleLeft"
+	_throttle_left.z_index = 5
+	_throttle_left.visible = false
+	add_child(_throttle_left)
+
+	_throttle_right = ThrottleGauge.new()
+	_throttle_right.name = "ThrottleRight"
+	_throttle_right.mirrored = true
+	_throttle_right.z_index = 5
+	_throttle_right.visible = false
+	add_child(_throttle_right)
 
 	_dock_prompt = Label.new()
 	_dock_prompt.name = "DockPrompt"
@@ -582,6 +792,7 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_camera = camera
 	_target = target
 	_level = level
+	_ship = ship
 	ship.fuel_changed.connect(_on_fuel_changed)
 	_on_fuel_changed(ship.fuel, ship.max_fuel)
 	if _minimap:
@@ -591,6 +802,7 @@ func setup(ship: Ship, camera: Camera3D = null, target: Target = null, level: Le
 	_setup_score(_level.get_score_tracker() if _level else null)
 	_setup_ammo(ship)
 	_update_target_indicator()
+	_update_throttle_gauges()
 
 
 func set_camera(camera: Camera3D) -> void:
@@ -635,6 +847,26 @@ func _on_cheats_changed(cheats_enabled: bool) -> void:
 
 func _process(_delta: float) -> void:
 	_update_target_indicator()
+	_update_throttle_gauges()
+
+
+func _update_throttle_gauges() -> void:
+	_update_throttle_gauge(_throttle_left, MountSlot.Binding.LEFT)
+	_update_throttle_gauge(_throttle_right, MountSlot.Binding.RIGHT)
+
+
+## A lever only exists for a side that actually carries an engine, so the
+## module is looked up live — a station swap changes it under the HUD.
+func _update_throttle_gauge(gauge: ThrottleGauge, binding: int) -> void:
+	if not gauge:
+		return
+	if not _ship or not is_instance_valid(_ship):
+		gauge.visible = false
+		return
+	var engine := _ship.get_engine_module(binding)
+	gauge.visible = engine != null
+	if engine:
+		gauge.set_readings(engine.throttle, engine.get_thrust_ratio(), engine.reversed)
 
 
 func _on_fuel_changed(current: float, maximum: float) -> void:

@@ -26,6 +26,13 @@ func physics_tick(_delta: float) -> void:
 	pass
 
 
+## Shuts the module down for good (the ship crashed). Modules with state that
+## outlives `active` — a spooling engine, say — clear it here.
+func stop() -> void:
+	active = false
+	intensity = 0.0
+
+
 func get_thrust_vector() -> Vector3:
 	return Vector3.ZERO
 

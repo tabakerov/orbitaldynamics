@@ -21,6 +21,9 @@ func _test_ship_reports_active_thrust_samples() -> void:
 	Input.action_press("thrust_left")
 	Input.flush_buffered_events()
 	ship._update_module_inputs()
+	# The engine spools up to the trigger's level; one long tick gets it there.
+	for module: ShipModule in ship._modules.values():
+		module.physics_tick(1.0)
 
 	var samples := ship.get_debug_thrust_force_samples()
 	assert(samples.size() == 1, "One active engine should produce one thrust debug sample.")

@@ -130,19 +130,41 @@ func _update_module_inputs() -> void:
 	for binding: int in _modules:
 		var module: ShipModule = _modules[binding]
 		var controls: Array = ENGINE_CONTROLS.get(binding, [])
-		if module is EngineModule and not controls.is_empty():
+		if module is EngineModule:
 			var engine := module as EngineModule
-			engine.intensity = Input.get_action_strength(controls[0])
-			engine.active = engine.intensity > 0.0
-			engine.reversed = Input.is_action_pressed(controls[1])
+			if controls.is_empty():
+				# An engine swapped onto the front or rear mount at a station
+				# has no trigger of its own, so its mount button is the
+				# throttle — all or nothing, but it spools like any other
+				# engine instead of becoming dead weight.
+				engine.throttle = 1.0 if _is_mount_pressed(binding) else 0.0
+				engine.reversed = false
+			else:
+				engine.throttle = _trigger_to_throttle(Input.get_action_strength(controls[0]))
+				engine.reversed = Input.is_action_pressed(controls[1])
+			# Stays active while the trigger is down and while the engine is
+			# still spooling down after it was let go — that residual thrust
+			# is real and has to keep its flame and its fuel bill.
+			engine.active = engine.throttle > 0.0 or engine.intensity > 0.0
 		else:
 			# Front and rear mounts run straight off their own button — there is
-			# no separate intensity trigger any more. This also covers an engine
-			# swapped onto one of them at a station: it burns at full thrust
-			# instead of becoming dead weight.
-			var action := "mount_" + MountSlot.binding_name(binding)
-			module.active = InputMap.has_action(action) and Input.is_action_pressed(action)
+			# no separate intensity trigger any more.
+			module.active = _is_mount_pressed(binding)
 			module.intensity = 1.0 if module.active else 0.0
+
+
+## Squares the trigger's travel before it becomes a thrust command: a light
+## pull gives far less than half power, so most of the trigger's resolution
+## lands at the bottom of the range, where docking and fine correction happen.
+## A full pull is still full thrust, so the keyboard's all-or-nothing is
+## unaffected.
+func _trigger_to_throttle(pull: float) -> float:
+	return pull * pull
+
+
+func _is_mount_pressed(binding: int) -> bool:
+	var action := "mount_" + MountSlot.binding_name(binding)
+	return InputMap.has_action(action) and Input.is_action_pressed(action)
 
 
 func _apply_engine_forces() -> void:
@@ -265,6 +287,13 @@ func _recalculate_mass_properties() -> void:
 		center_of_mass = weighted / total
 
 
+## The engine on the given mount, or null when that mount is empty or carries
+## something else. Read every frame by the HUD throttle levers, so it has to
+## stay honest after a station swap — hence the live lookup.
+func get_engine_module(binding: int) -> EngineModule:
+	return _modules.get(binding) as EngineModule
+
+
 func get_weapon_modules() -> Array[WeaponModule]:
 	var result: Array[WeaponModule] = []
 	for module: ShipModule in _modules.values():
@@ -303,8 +332,7 @@ func crash_at(crash_position: Vector3) -> void:
 
 func _stop_modules() -> void:
 	for module: ShipModule in _modules.values():
-		module.active = false
-		module.intensity = 0.0
+		module.stop()
 
 
 func _get_crash_position(body: CelestialBody) -> Vector3:

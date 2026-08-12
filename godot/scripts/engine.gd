@@ -5,6 +5,12 @@ extends ShipModule
 ## the other way, so the ship is pushed in the opposite direction.
 var reversed: bool = false
 
+## Thrust level the trigger asks for, 0…1. The engine does not jump to it —
+## `intensity`, the thrust actually leaving the nozzle, chases this value at
+## the profile's spool rates, so a stab at the trigger takes a moment to
+## become acceleration and releasing it leaves a fading tail of thrust.
+var throttle: float = 0.0
+
 @onready var _exhaust: MeshInstance3D = $Exhaust
 @onready var _active_light: OmniLight3D = $ActiveLight
 @onready var _particles: GPUParticles3D = $ExhaustParticles
@@ -37,6 +43,29 @@ func _process(_delta: float) -> void:
 func get_mass() -> float:
 	var ep := profile as EngineProfile
 	return ep.dry_mass if ep else 0.0
+
+
+func physics_tick(delta: float) -> void:
+	var ep := profile as EngineProfile
+	if not ep:
+		intensity = throttle
+		return
+	var rate := ep.spool_up_rate if throttle > intensity else ep.spool_down_rate
+	intensity = move_toward(intensity, throttle, maxf(rate, 0.0) * delta)
+
+
+func stop() -> void:
+	super()
+	throttle = 0.0
+
+
+## Fraction of rated thrust actually leaving the nozzle this frame — what the
+## HUD needle points at. Fuel starvation counts: a dry tank reads zero even
+## while the engine is spun up.
+func get_thrust_ratio() -> float:
+	if not active or intensity <= 0.0 or not _has_effective_fuel_supply():
+		return 0.0
+	return intensity * fuel_supply_ratio
 
 
 func _sync_nozzle_direction() -> void:

@@ -84,6 +84,10 @@ func _test_engine_effects_stop_after_multi_engine_burnout() -> void:
 	Input.action_press("thrust_left")
 	Input.action_press("thrust_right")
 	ship._update_module_inputs()
+	# Engines follow the trigger with a spool delay; one long tick puts both
+	# at full thrust before the burn starts.
+	for module: ShipModule in ship._modules.values():
+		module.physics_tick(1.0)
 
 	# Burn the tank dry across several engines: summed per-module drains used
 	# to leave float residue that kept exhaust particles emitting forever.
