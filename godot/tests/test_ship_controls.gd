@@ -19,6 +19,7 @@ func _ready() -> void:
 	_test_engine_thrust_lags_behind_the_trigger()
 	_test_trigger_travel_is_squared()
 	_test_bumper_reverses_only_its_own_engine()
+	await _test_symmetric_thrust_lock_levels_both_engines()
 	_test_front_mount_module_runs_off_its_button()
 	_test_throttle_gauges_mirror_the_engines()
 	print("All ship control tests passed!")
@@ -148,6 +149,68 @@ func _test_bumper_reverses_only_its_own_engine() -> void:
 	ship.queue_free()
 
 
+func _test_symmetric_thrust_lock_levels_both_engines() -> void:
+	var ship := _spawn_ship(DefaultLoadout)
+	var left := ship._modules[MountSlot.Binding.LEFT] as EngineModule
+	var right := ship._modules[MountSlot.Binding.RIGHT] as EngineModule
+	assert(not ship.thrust_locked, "The lock is off until the pilot asks for it.")
+
+	_press("thrust_left", 1.0)
+	_press("thrust_right", 0.5)
+	ship._update_module_inputs()
+	assert(
+		is_equal_approx(left.throttle, 1.0) and is_equal_approx(right.throttle, 0.25),
+		"Unlocked, each side answers only to its own trigger.",
+	)
+
+	# The button is a mode switch: it toggles on press and stays put when let go.
+	_press("thrust_lock")
+	ship._update_thrust_lock()
+	assert(ship.thrust_locked, "The button should engage the lock.")
+	_release("thrust_lock")
+	await get_tree().process_frame
+	ship._update_thrust_lock()
+	assert(ship.thrust_locked, "Letting the button go must not disengage it — it is a mode.")
+
+	ship._update_module_inputs()
+	assert(
+		is_equal_approx(left.throttle, 1.0) and is_equal_approx(right.throttle, 1.0),
+		"Locked, the harder-pulled trigger drives both sides, got %f / %f"
+			% [left.throttle, right.throttle],
+	)
+
+	# The lock levels the thrust, not the direction: one bumper still spins
+	# the ship on the spot.
+	_press("reverse_right")
+	ship._update_module_inputs()
+	_spool_up(ship)
+	assert(not left.reversed and right.reversed, "Reverse stays a per-side control under the lock.")
+	assert(
+		is_equal_approx(left.get_thrust_vector().length(), right.get_thrust_vector().length()),
+		"Both engines should push equally hard even when one pushes the other way.",
+	)
+
+	# Releasing the harder trigger hands the lock over to the other one.
+	_release("thrust_left")
+	ship._update_module_inputs()
+	assert(
+		is_equal_approx(left.throttle, 0.25) and is_equal_approx(right.throttle, 0.25),
+		"With the strongest trigger let go, both sides fall to what is left.",
+	)
+
+	_press("thrust_lock")
+	ship._update_thrust_lock()
+	assert(not ship.thrust_locked, "A second press should switch the lock back off.")
+	ship._update_module_inputs()
+	assert(is_zero_approx(left.throttle), "Unlocked again, an untouched trigger means no thrust.")
+	print("  PASS: symmetric thrust lock levels both engines")
+
+	_release("thrust_lock")
+	_release("thrust_right")
+	_release("reverse_right")
+	ship.queue_free()
+
+
 func _test_front_mount_module_runs_off_its_button() -> void:
 	var loadout := ShipLoadout.new()
 	loadout.hull = RectangularHull
@@ -219,6 +282,14 @@ func _test_throttle_gauges_mirror_the_engines() -> void:
 	hud._update_throttle_gauges()
 	assert(is_equal_approx(left_gauge._thrust, 0.25), "The needle should catch up with the lever.")
 	assert(is_zero_approx(right_gauge._throttle), "The other side's lever should not move.")
+
+	# Symmetric thrust is a ship-wide mode, so both levers light their lamp.
+	assert(not left_gauge._locked and not right_gauge._locked, "The lock lamp is dark by default.")
+	ship.thrust_locked = true
+	ship._update_module_inputs()
+	hud._update_throttle_gauges()
+	assert(left_gauge._locked and right_gauge._locked, "Both levers should light LOCKED together.")
+	ship.thrust_locked = false
 
 	ship.apply_loadout_change(MountSlot.Binding.RIGHT, null)
 	hud._update_throttle_gauges()

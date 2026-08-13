@@ -23,6 +23,11 @@ signal crashed(crash_position: Vector3)
 var fuel: float
 var max_fuel: float
 
+## Symmetric thrust: both engines take the same command, the higher of the two
+## triggers. The ship accelerates without turning, at the price of steering by
+## thrust. Toggled by a button, off by default, and a restart clears it.
+var thrust_locked: bool = false
+
 var _modules: Dictionary = {}
 var _mount_nodes: Dictionary = {}
 var _hull_dry_mass: float = 10.0
@@ -116,6 +121,7 @@ func _spawn_mounts_and_modules(hull: HullData) -> void:
 func _physics_process(delta: float) -> void:
 	if _crashed:
 		return
+	_update_thrust_lock()
 	_update_module_inputs()
 	for module: ShipModule in _modules.values():
 		module.physics_tick(delta)
@@ -127,6 +133,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_module_inputs() -> void:
+	var side_throttles := _read_side_throttles()
 	for binding: int in _modules:
 		var module: ShipModule = _modules[binding]
 		var controls: Array = ENGINE_CONTROLS.get(binding, [])
@@ -140,7 +147,7 @@ func _update_module_inputs() -> void:
 				engine.throttle = 1.0 if _is_mount_pressed(binding) else 0.0
 				engine.reversed = false
 			else:
-				engine.throttle = _trigger_to_throttle(Input.get_action_strength(controls[0]))
+				engine.throttle = side_throttles[binding]
 				engine.reversed = Input.is_action_pressed(controls[1])
 			# Stays active while the trigger is down and while the engine is
 			# still spooling down after it was let go — that residual thrust
@@ -151,6 +158,32 @@ func _update_module_inputs() -> void:
 			# no separate intensity trigger any more.
 			module.active = _is_mount_pressed(binding)
 			module.intensity = 1.0 if module.active else 0.0
+
+
+## The symmetric-thrust button is a mode switch, not a hold: one press turns
+## it on, the next turns it off.
+func _update_thrust_lock() -> void:
+	if InputMap.has_action("thrust_lock") and Input.is_action_just_pressed("thrust_lock"):
+		thrust_locked = not thrust_locked
+
+
+## What each side's trigger is asking for, already curved. With symmetric
+## thrust engaged the harder-pulled trigger wins and both sides get its value,
+## so the ship accelerates without any turning moment — the trigger the pilot
+## is not pressing stops mattering. Reverse stays per-side even then: a bumper
+## turns one nozzle around, which is still the only way to spin on the spot.
+func _read_side_throttles() -> Dictionary:
+	var throttles: Dictionary = {}
+	var highest := 0.0
+	for binding: int in ENGINE_CONTROLS:
+		var controls: Array = ENGINE_CONTROLS[binding]
+		var throttle := _trigger_to_throttle(Input.get_action_strength(controls[0]))
+		throttles[binding] = throttle
+		highest = maxf(highest, throttle)
+	if thrust_locked:
+		for binding: int in throttles:
+			throttles[binding] = highest
+	return throttles
 
 
 ## Squares the trigger's travel before it becomes a thrust command: a light

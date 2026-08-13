@@ -253,15 +253,16 @@ class ThrottleGauge:
 	## lever rides that side's trigger; the needle and the bar in the slot
 	## show the thrust the engine actually delivers. The gap between them is
 	## the engine's spool lag, made visible — that is the whole point of the
-	## instrument. The lamp underneath lights while the side runs in reverse.
+	## instrument. Two lamps frame the scale: symmetric thrust above, reverse
+	## below.
 
 	const GAUGE_SIZE := Vector2(64.0, 300.0)
 	const EDGE_MARGIN := 14.0
 
 	const SLOT_CENTER_X := 26.0
 	const SLOT_HALF_WIDTH := 7.0
-	const SLOT_TOP := 18.0
-	const SLOT_BOTTOM := 236.0
+	const SLOT_TOP := 62.0
+	const SLOT_BOTTOM := 240.0
 	const TICK_OUTER_X := 4.0
 	const TICK_MINOR_X := 8.0
 	const TICK_INNER_X := 13.0
@@ -271,10 +272,12 @@ class ThrottleGauge:
 	const NEEDLE_TIP_X := 41.0
 	const NEEDLE_BASE_X := 55.0
 	const NEEDLE_HALF_HEIGHT := 7.0
-	const LAMP_CENTER_Y := 262.0
-	const LAMP_RADIUS := 10.0
-	const LAMP_LABEL_Y := 288.0
-	const LAMP_LABEL_FONT_SIZE := 12
+	const LOCK_LAMP_CENTER_Y := 24.0
+	const LOCK_LABEL_Y := 46.0
+	const REVERSE_LAMP_CENTER_Y := 264.0
+	const REVERSE_LABEL_Y := 288.0
+	const LAMP_RADIUS := 9.0
+	const LAMP_LABEL_FONT_SIZE := 11
 
 	const BACKGROUND_COLOR := Color(0.015, 0.025, 0.055, 0.72)
 	const BORDER_COLOR := Color(0.55, 0.72, 0.95, 0.42)
@@ -288,8 +291,8 @@ class ThrottleGauge:
 	const HANDLE_OUTLINE_COLOR := Color(0.02, 0.05, 0.1, 0.95)
 	const NEEDLE_COLOR := Color(1.0, 0.85, 0.3, 1.0)
 	const NEEDLE_OUTLINE_COLOR := Color(0.1, 0.07, 0.02, 0.9)
-	const LAMP_OFF_COLOR := Color(0.17, 0.09, 0.07, 0.9)
-	const LAMP_ON_COLOR := Color(1.0, 0.42, 0.18, 1.0)
+	const REVERSE_ON_COLOR := Color(1.0, 0.42, 0.18, 1.0)
+	const LOCK_ON_COLOR := Color(1.0, 0.85, 0.2, 1.0)
 	const LAMP_RING_COLOR := Color(0.75, 0.45, 0.32, 0.55)
 	const LAMP_LABEL_OFF_COLOR := Color(0.55, 0.44, 0.4, 0.65)
 
@@ -300,6 +303,7 @@ class ThrottleGauge:
 	var _throttle: float = 0.0
 	var _thrust: float = 0.0
 	var _reversed: bool = false
+	var _locked: bool = false
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -319,26 +323,29 @@ class ThrottleGauge:
 			offset_right = EDGE_MARGIN + GAUGE_SIZE.x
 
 	## `throttle` is what the trigger asks for, `thrust` what the engine gives.
-	func set_readings(throttle: float, thrust: float, reversed: bool) -> void:
+	func set_readings(throttle: float, thrust: float, reversed: bool, locked: bool) -> void:
 		if (
 			is_equal_approx(_throttle, throttle)
 			and is_equal_approx(_thrust, thrust)
 			and _reversed == reversed
+			and _locked == locked
 		):
 			return
 		_throttle = throttle
 		_thrust = thrust
 		_reversed = reversed
+		_locked = locked
 		queue_redraw()
 
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR, true)
 		draw_rect(Rect2(Vector2.ZERO, size), BORDER_COLOR, false, 1.5)
+		_draw_lamp(LOCK_LAMP_CENTER_Y, LOCK_LABEL_Y, "LOCKED", _locked, LOCK_ON_COLOR)
 		_draw_scale()
 		_draw_slot()
 		_draw_needle()
 		_draw_handle()
-		_draw_reverse_lamp()
+		_draw_lamp(REVERSE_LAMP_CENTER_Y, REVERSE_LABEL_Y, "REV", _reversed, REVERSE_ON_COLOR)
 
 	func _draw_scale() -> void:
 		for step in range(0, 9):
@@ -404,28 +411,31 @@ class ThrottleGauge:
 			1.5,
 		)
 
-	func _draw_reverse_lamp() -> void:
-		var center := Vector2(size.x * 0.5, LAMP_CENTER_Y)
-		draw_circle(center, LAMP_RADIUS, LAMP_ON_COLOR if _reversed else LAMP_OFF_COLOR)
+	## An indicator lamp with its caption under it. Unlit it is a dark version
+	## of its own colour, the way a real lamp reads when it is not on.
+	func _draw_lamp(
+		center_y: float, label_y: float, label: String, lit: bool, lit_color: Color
+	) -> void:
+		var center := Vector2(size.x * 0.5, center_y)
+		draw_circle(center, LAMP_RADIUS, lit_color if lit else lit_color.darkened(0.82))
 		draw_arc(center, LAMP_RADIUS + 1.5, 0.0, TAU, 24, LAMP_RING_COLOR, 1.5)
-		if _reversed:
-			draw_arc(center, LAMP_RADIUS + 4.5, 0.0, TAU, 24, Color(LAMP_ON_COLOR, 0.45), 2.5)
+		if lit:
+			draw_arc(center, LAMP_RADIUS + 4.5, 0.0, TAU, 24, Color(lit_color, 0.45), 2.5)
 
 		var font := get_theme_default_font()
 		if not font:
 			return
-		var label := "REV"
 		var width := font.get_string_size(
 			label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LAMP_LABEL_FONT_SIZE
 		).x
 		draw_string(
 			font,
-			Vector2(size.x * 0.5 - width * 0.5, LAMP_LABEL_Y),
+			Vector2(size.x * 0.5 - width * 0.5, label_y),
 			label,
 			HORIZONTAL_ALIGNMENT_LEFT,
 			-1.0,
 			LAMP_LABEL_FONT_SIZE,
-			LAMP_ON_COLOR if _reversed else LAMP_LABEL_OFF_COLOR,
+			lit_color if lit else LAMP_LABEL_OFF_COLOR,
 		)
 
 	func _value_y(value: float) -> float:
@@ -920,7 +930,9 @@ func _update_throttle_gauge(gauge: ThrottleGauge, binding: int) -> void:
 	var engine := _ship.get_engine_module(binding)
 	gauge.visible = engine != null
 	if engine:
-		gauge.set_readings(engine.throttle, engine.get_thrust_ratio(), engine.reversed)
+		gauge.set_readings(
+			engine.throttle, engine.get_thrust_ratio(), engine.reversed, _ship.thrust_locked
+		)
 
 
 func _on_fuel_changed(current: float, maximum: float) -> void:
