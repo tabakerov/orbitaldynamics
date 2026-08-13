@@ -62,9 +62,10 @@ func _test_engine_thrust_lags_behind_the_trigger() -> void:
 
 	for i in 6:
 		left.physics_tick(delta)
+	var gained_in_a_tenth := left.intensity
 	assert(
-		left.intensity > 0.0 and left.intensity < 1.0,
-		"A tenth of a second in, the engine should be spooling up, got %f" % left.intensity,
+		gained_in_a_tenth > 0.0 and gained_in_a_tenth < 1.0,
+		"A tenth of a second in, the engine should be spooling up, got %f" % gained_in_a_tenth,
 	)
 
 	for i in 300:
@@ -80,6 +81,18 @@ func _test_engine_thrust_lags_behind_the_trigger() -> void:
 		"Releasing the trigger should start a spool-down, not a cut, got %f" % left.intensity,
 	)
 	assert(left.active, "The engine stays active while it spools down — that thrust is still real.")
+
+	# Coming down is much the quicker half: an engine only has to stop burning
+	# to lose thrust, and a burn that ended as slowly as it began would
+	# overshoot every manoeuvre.
+	for i in 5:
+		left.physics_tick(delta)
+	var shed_in_a_tenth := 1.0 - left.intensity
+	assert(
+		shed_in_a_tenth > gained_in_a_tenth * 2.0,
+		"The same tenth of a second should shed far more thrust than it builds, got %f down vs %f up"
+			% [shed_in_a_tenth, gained_in_a_tenth],
+	)
 
 	for i in 300:
 		left.physics_tick(delta)

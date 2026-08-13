@@ -9,7 +9,10 @@ extends ModuleProfile
 ## the gap, after three times that it is there. A time constant rather than a
 ## fixed rate on purpose — the lag is then the same whether the pilot asks for
 ## a nudge or for full power, so small corrections feel as heavy as big ones.
-## Spooling down is quicker than spooling up, the way a throttled engine
-## behaves.
+##
+## Cutting thrust is several times quicker than building it: the engine has to
+## fight its way up to power but only has to stop burning to come down. That
+## asymmetry is also what makes the ship pilotable — a burn that took as long
+## to end as to start would overshoot every time.
 @export var spool_up_time: float = 0.4
-@export var spool_down_time: float = 0.28
+@export var spool_down_time: float = 0.1
