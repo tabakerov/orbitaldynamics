@@ -4,9 +4,12 @@ extends ModuleProfile
 @export var max_thrust: float = 100.0
 @export var fuel_consumption_rate: float = 10.0
 @export var dry_mass: float = 0.0
-## How quickly the engine follows the trigger, in fractions of full thrust per
-## second: 1.6 means idle → full takes 0.63 s. Spooling down is quicker than
-## spooling up, the way a throttled engine behaves — the trigger sets the
-## thrust the pilot wants, not the thrust the engine has.
-@export var spool_up_rate: float = 1.6
-@export var spool_down_rate: float = 2.6
+## How long the engine takes to answer the trigger, as the time constant of an
+## exponential approach: after `spool_up_time` seconds it has covered 63% of
+## the gap, after three times that it is there. A time constant rather than a
+## fixed rate on purpose — the lag is then the same whether the pilot asks for
+## a nudge or for full power, so small corrections feel as heavy as big ones.
+## Spooling down is quicker than spooling up, the way a throttled engine
+## behaves.
+@export var spool_up_time: float = 0.4
+@export var spool_down_time: float = 0.28

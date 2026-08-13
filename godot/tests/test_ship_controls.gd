@@ -17,6 +17,7 @@ const RocketWeapon = preload("res://resources/weapons/weapon_rockets.tres")
 func _ready() -> void:
 	_test_each_trigger_drives_only_its_own_engine()
 	_test_engine_thrust_lags_behind_the_trigger()
+	_test_small_throttle_changes_lag_as_much_as_big_ones()
 	_test_trigger_travel_is_squared()
 	_test_bumper_reverses_only_its_own_engine()
 	await _test_symmetric_thrust_lock_levels_both_engines()
@@ -66,7 +67,7 @@ func _test_engine_thrust_lags_behind_the_trigger() -> void:
 		"A tenth of a second in, the engine should be spooling up, got %f" % left.intensity,
 	)
 
-	for i in 120:
+	for i in 300:
 		left.physics_tick(delta)
 	assert(is_equal_approx(left.intensity, 1.0), "Held long enough, the engine reaches the commanded thrust.")
 
@@ -80,13 +81,52 @@ func _test_engine_thrust_lags_behind_the_trigger() -> void:
 	)
 	assert(left.active, "The engine stays active while it spools down — that thrust is still real.")
 
-	for i in 120:
+	for i in 300:
 		left.physics_tick(delta)
 	ship._update_module_inputs()
 	assert(is_zero_approx(left.intensity), "The engine should settle at idle.")
 	assert(not left.active, "A spooled-down engine with the trigger up is off.")
 	print("  PASS: engine thrust lags behind the trigger")
 
+	ship.queue_free()
+
+
+## The lag is a time constant, not a fixed rate: asking for a little thrust
+## has to take just as long as asking for a lot, or fine corrections would
+## land instantly and the inertia would only exist at high power.
+func _test_small_throttle_changes_lag_as_much_as_big_ones() -> void:
+	var ship := _spawn_ship(DefaultLoadout)
+	var left := ship._modules[MountSlot.Binding.LEFT] as EngineModule
+	var delta := 1.0 / 60.0
+
+	_press("thrust_left", 0.4)  # squared: a 0.16 command
+	ship._update_module_inputs()
+	for i in 12:
+		left.physics_tick(delta)
+	var small_progress := left.intensity / left.throttle
+
+	_release("thrust_left")
+	_spool_up(ship)
+	_press("thrust_left", 1.0)
+	ship._update_module_inputs()
+	left.intensity = 0.0
+	for i in 12:
+		left.physics_tick(delta)
+	var large_progress := left.intensity / left.throttle
+
+	assert(
+		small_progress < 0.6,
+		"A fifth of a second should not get a small command most of the way there, got %f"
+			% small_progress,
+	)
+	assert(
+		is_equal_approx(small_progress, large_progress),
+		"Both commands should be the same fraction of the way there, got %f vs %f"
+			% [small_progress, large_progress],
+	)
+	print("  PASS: small throttle changes lag as much as big ones")
+
+	_release("thrust_left")
 	ship.queue_free()
 
 
@@ -179,15 +219,16 @@ func _test_symmetric_thrust_lock_levels_both_engines() -> void:
 			% [left.throttle, right.throttle],
 	)
 
-	# The lock levels the thrust, not the direction: one bumper still spins
-	# the ship on the spot.
+	# Direction is levelled too: one bumper turns both engines around, so the
+	# locked ship backs up straight instead of spinning.
 	_press("reverse_right")
 	ship._update_module_inputs()
 	_spool_up(ship)
-	assert(not left.reversed and right.reversed, "Reverse stays a per-side control under the lock.")
+	assert(left.reversed and right.reversed, "Either bumper should reverse both engines under the lock.")
 	assert(
-		is_equal_approx(left.get_thrust_vector().length(), right.get_thrust_vector().length()),
-		"Both engines should push equally hard even when one pushes the other way.",
+		left.get_thrust_vector().is_equal_approx(right.get_thrust_vector()),
+		"Both engines should push the same way, just as hard, got %s vs %s"
+			% [left.get_thrust_vector(), right.get_thrust_vector()],
 	)
 
 	# Releasing the harder trigger hands the lock over to the other one.
@@ -309,11 +350,12 @@ func _spawn_ship(loadout: ShipLoadout) -> Ship:
 	return ship
 
 
-## Runs every engine's spool-up to completion: one second is far more than the
-## profile needs to travel from idle to whatever the trigger is asking for.
+## Runs every engine's spool to completion. The approach is exponential, so a
+## deliberately huge tick is the cheap way to land exactly on the commanded
+## thrust instead of a hair short of it.
 func _spool_up(ship: Ship) -> void:
 	for module: ShipModule in ship._modules.values():
-		module.physics_tick(1.0)
+		module.physics_tick(10.0)
 
 
 func _press(action: StringName, strength: float = 1.0) -> void:

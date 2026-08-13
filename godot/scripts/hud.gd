@@ -6,18 +6,28 @@ class TargetIndicator:
 	const INDICATOR_SIZE := Vector2(34.0, 34.0)
 	const FILL_COLOR := Color(1.0, 0.82, 0.16, 0.95)
 	const OUTLINE_COLOR := Color(0.1, 0.07, 0.02, 0.9)
+	const LABEL_FONT_SIZE := 17
+	const LABEL_OUTLINE_SIZE := 4
+	## How far inboard of the arrow the range reads. The arrow points off the
+	## screen, so the label goes the other way — towards the middle, where
+	## there is room for it.
+	const LABEL_OFFSET := 30.0
 
 	var angle: float = 0.0
+	var distance: float = 0.0
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		size = INDICATOR_SIZE
 		pivot_offset = INDICATOR_SIZE * 0.5
 
-	func set_angle(value: float) -> void:
-		if is_equal_approx(angle, value):
+	func set_reading(new_angle: float, new_distance: float) -> void:
+		# Rounded, because that is all the label shows: redrawing on every
+		# centimetre of drift would repaint the HUD for nothing.
+		if is_equal_approx(angle, new_angle) and roundi(distance) == roundi(new_distance):
 			return
-		angle = value
+		angle = new_angle
+		distance = new_distance
 		queue_redraw()
 
 	func _draw() -> void:
@@ -33,6 +43,38 @@ class TargetIndicator:
 		var outline := PackedVector2Array(points)
 		outline.append(points[0])
 		draw_polyline(outline, OUTLINE_COLOR, 2.0, true)
+		_draw_distance(center)
+
+	## Drawn upright whatever way the arrow points, and outside the control's
+	## own rect — nothing clips it, and the arrow stays pinned to the edge.
+	func _draw_distance(center: Vector2) -> void:
+		var font := get_theme_default_font()
+		if not font:
+			return
+		var text := format_distance(distance)
+		var text_size := font.get_string_size(
+			text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_FONT_SIZE
+		)
+		var anchor := center - Vector2(LABEL_OFFSET, 0.0).rotated(angle)
+		var position := anchor - Vector2(text_size.x * 0.5, -text_size.y * 0.3)
+		draw_string_outline(
+			font,
+			position,
+			text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1.0,
+			LABEL_FONT_SIZE,
+			LABEL_OUTLINE_SIZE,
+			OUTLINE_COLOR,
+		)
+		draw_string(
+			font, position, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, LABEL_FONT_SIZE, FILL_COLOR
+		)
+
+	static func format_distance(meters: float) -> String:
+		if meters < 1000.0:
+			return "%d м" % roundi(meters)
+		return "%.1f км" % (meters / 1000.0)
 
 class Minimap:
 	extends Control
@@ -982,5 +1024,9 @@ func _update_target_indicator() -> void:
 	var edge_position := screen_center + direction * minf(scale_x, scale_y)
 	var indicator_size := _target_indicator.size
 	_target_indicator.position = edge_position - indicator_size * 0.5
-	_target_indicator.set_angle(direction.angle())
+	# Range from the ship, not from the camera: the pilot is flying the ship.
+	var range_from_ship := 0.0
+	if _ship and is_instance_valid(_ship):
+		range_from_ship = _ship.global_position.distance_to(target_position)
+	_target_indicator.set_reading(direction.angle(), range_from_ship)
 	_target_indicator.visible = true

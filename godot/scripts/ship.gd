@@ -134,6 +134,7 @@ func _physics_process(delta: float) -> void:
 
 func _update_module_inputs() -> void:
 	var side_throttles := _read_side_throttles()
+	var side_reversed := _read_side_reversed()
 	for binding: int in _modules:
 		var module: ShipModule = _modules[binding]
 		var controls: Array = ENGINE_CONTROLS.get(binding, [])
@@ -148,7 +149,7 @@ func _update_module_inputs() -> void:
 				engine.reversed = false
 			else:
 				engine.throttle = side_throttles[binding]
-				engine.reversed = Input.is_action_pressed(controls[1])
+				engine.reversed = side_reversed[binding]
 			# Stays active while the trigger is down and while the engine is
 			# still spooling down after it was let go — that residual thrust
 			# is real and has to keep its flame and its fuel bill.
@@ -170,8 +171,7 @@ func _update_thrust_lock() -> void:
 ## What each side's trigger is asking for, already curved. With symmetric
 ## thrust engaged the harder-pulled trigger wins and both sides get its value,
 ## so the ship accelerates without any turning moment — the trigger the pilot
-## is not pressing stops mattering. Reverse stays per-side even then: a bumper
-## turns one nozzle around, which is still the only way to spin on the spot.
+## is not pressing stops mattering.
 func _read_side_throttles() -> Dictionary:
 	var throttles: Dictionary = {}
 	var highest := 0.0
@@ -184,6 +184,24 @@ func _read_side_throttles() -> Dictionary:
 		for binding: int in throttles:
 			throttles[binding] = highest
 	return throttles
+
+
+## Which sides are pushing backwards. Under symmetric thrust either bumper
+## reverses both engines: the mode promises that the two sides always do the
+## same thing, and direction is part of doing the same thing — one nozzle
+## turned around would spin the very ship the pilot locked to stop spinning.
+func _read_side_reversed() -> Dictionary:
+	var reversed: Dictionary = {}
+	var any := false
+	for binding: int in ENGINE_CONTROLS:
+		var controls: Array = ENGINE_CONTROLS[binding]
+		var side_reversed: bool = Input.is_action_pressed(controls[1])
+		reversed[binding] = side_reversed
+		any = any or side_reversed
+	if thrust_locked and any:
+		for binding: int in reversed:
+			reversed[binding] = true
+	return reversed
 
 
 ## Squares the trigger's travel before it becomes a thrust command: a light

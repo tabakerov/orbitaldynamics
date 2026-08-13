@@ -1,6 +1,9 @@
 class_name EngineModule
 extends ShipModule
 
+## Closer than this to the commanded thrust and the engine is simply there.
+const SPOOL_SETTLE_EPSILON: float = 0.001
+
 ## Set by the ship when the engine's bumper is held: thrust leaves the nozzle
 ## the other way, so the ship is pushed in the opposite direction.
 var reversed: bool = false
@@ -47,11 +50,20 @@ func get_mass() -> float:
 
 func physics_tick(delta: float) -> void:
 	var ep := profile as EngineProfile
-	if not ep:
+	var spool_time := 0.0
+	if ep:
+		spool_time = ep.spool_up_time if throttle > intensity else ep.spool_down_time
+	if spool_time <= 0.0 or delta <= 0.0:
 		intensity = throttle
 		return
-	var rate := ep.spool_up_rate if throttle > intensity else ep.spool_down_rate
-	intensity = move_toward(intensity, throttle, maxf(rate, 0.0) * delta)
+	# Exponential approach: the engine covers the same fraction of whatever
+	# gap is left every tick, so it drags its feet just as much on a 5% nudge
+	# as on a stab to full power.
+	intensity = lerpf(intensity, throttle, 1.0 - exp(-delta / spool_time))
+	# The tail is asymptotic; without this the engine would idle forever a
+	# hair away from the commanded thrust and never read as settled.
+	if absf(throttle - intensity) < SPOOL_SETTLE_EPSILON:
+		intensity = throttle
 
 
 func stop() -> void:
